@@ -27,5 +27,15 @@ namespace DedicatedFTPServerValheim
             
             return files;
         }
+        public static List<string> GetDirectoryRecursive(DirectoryModel dir)
+        {
+            List<string> directories = new List<string>();
+            directories.AddRange(dir.Directories.Select(x=>x.PathDirectory));
+            foreach (var recDir in dir.Directories)
+            {
+                directories.AddRange(GetDirectoryRecursive(recDir));
+            }
+            return directories;
+        }
     }
 }

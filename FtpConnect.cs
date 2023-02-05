@@ -92,7 +92,7 @@ namespace DedicatedFTPServerValheim
             ListFiles = LoadListDirectoryAndFiles(_url.OriginalString);
             List<string> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(ListFiles);
             int count = 0;
-            
+
             foreach (var file in filesAll)
             {
                 await Task.Run(() => GetFileFtp(file, pathSave));
@@ -132,7 +132,7 @@ namespace DedicatedFTPServerValheim
                 if (cancel)
                     return;
                 TaskDialogButtonCollection buttons = new TaskDialogButtonCollection() { new TaskDialogButton("Да"), new TaskDialogButton("Да для всех!"), new TaskDialogButton("Нет"), new TaskDialogButton("Нет для всех!") };
-                TaskDialogPage dialog = new TaskDialogPage() { Text = "Файлы существуют! Перезаписать?", Buttons = buttons };
+                TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {Path.GetFileName(file)} существует! Перезаписать?", Buttons = buttons };
                 var result = TaskDialog.ShowDialog(dialog);
                 if (result == buttons[2])
                     return;
@@ -177,36 +177,62 @@ namespace DedicatedFTPServerValheim
         public async Task UploadFilesBack(string pathTempDirectory, IProgress<int> progress)
         {
             List<string> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(ListFiles);
+            List<string> directories = DirectoryModel.GetDirectoryRecursive(ListFiles);
+            foreach (var path in directories)
+            {
+                CreateDirectoryFtp(path);
+            }
+
+            int count = 0;
             foreach (string file in filesAll)
             {
                 Uri fileNameUri = new Uri(file);
                 var tempPath = Path.Combine(pathTempDirectory, _url.MakeRelativeUri(fileNameUri).OriginalString.Replace("/", "\\"));
                 if (!File.Exists(tempPath))
                     throw new Exception("Не найден файл " + tempPath);
-
-                UploadFileFtp(tempPath, fileNameUri);
-
+                await Task.Run(()=>UploadFileFtp(tempPath, fileNameUri));
+                progress.Report(++count * 100 / filesAll.Count);
             }
 
         }
+
+        private void CreateDirectoryFtp(string directoryPath)
+        {
+            try
+            {
+                FtpWebRequest ftpWeb = FtpWebRequest.Create(directoryPath) as FtpWebRequest;
+                ftpWeb.Method = WebRequestMethods.Ftp.MakeDirectory;
+                ftpWeb.GetResponse();
+            }
+            catch (WebException wEx)
+            {
+                if (!wEx.Message.Contains("550"))
+                    throw;
+            }
+
+        }
+
         private void UploadFileFtp(string filePathTemp, Uri filePathFtp)
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create(filePathFtp) as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.UploadFile;
-
             ftpWeb.UseBinary = true;
-            using FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse;
-            if (response.StatusDescription.Contains("150") && response.StatusCode == FtpStatusCode.OpeningData)
+
+            using Stream streamRequest = ftpWeb.GetRequestStream();
+            using FileStream reader = new FileStream(filePathTemp, FileMode.Open);
+            ftpWeb.ContentLength = reader.Length;
+            int bit = reader.ReadByte();
+            while (bit != -1)
             {
-                using Stream streamResponse = response.GetResponseStream();
-                using FileStream writer = new FileStream(tempPath, FileMode.Create);
-                int byt = streamResponse.ReadByte();
-                while (byt != -1)
-                {
-                    writer.WriteByte((byte)byt);
-                    byt = streamResponse.ReadByte();
-                }
-                writer.Flush();
+                streamRequest.WriteByte((byte)bit);
+                bit = reader.ReadByte();
+            }
+            streamRequest.Flush();
+            streamRequest.Close();
+            using FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse;
+            if (!response.StatusDescription.Contains("226") && response.StatusCode != FtpStatusCode.ClosingData)
+            {
+                throw new Exception("Ошибка при загрзке файла " + filePathTemp);
             }
         }
     }

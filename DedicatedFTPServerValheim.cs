@@ -21,7 +21,8 @@ namespace DedicatedFTPServerValheim
             pathBat.Text = Properties.Settings.Default.PathBat;
             pathFTP.Text = Properties.Settings.Default.PathFTP;
             pathTemp.Text = Properties.Settings.Default.PathTemp;
-            progressFileLoading = new Progress<int>(prog => { 
+            progressFileLoading = new Progress<int>(prog =>
+            {
                 progressBarFtp.Value = prog;
             });
             this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
@@ -61,21 +62,23 @@ namespace DedicatedFTPServerValheim
         {
             Properties.Settings.Default.Save();
             StateUnactive();
+            progressBarFtp.Visible = true;
+            progressBarFtp.Value = 0;
             var invChars = Path.GetInvalidPathChars();
 
-            if (File.Exists(pathBat.Text) && pathBat.Text.IndexOfAny(invChars) > 0)
+            if (!File.Exists(pathBat.Text) || pathBat.Text.IndexOfAny(invChars) > 0)
             {
                 MessageBox.Show("Неверный путь! PathBat");
                 StateActive();
                 return;
             }
-            else if (Directory.Exists(pathTemp.Text) && pathTemp.Text.IndexOfAny(invChars) > 0)
+            else if (!Directory.Exists(pathTemp.Text) || pathTemp.Text.IndexOfAny(invChars) > 0)
             {
                 MessageBox.Show("Неверный путь! PathTemp");
                 StateActive();
                 return;
             }
-            else if (Uri.IsWellFormedUriString(pathFTP.Text, UriKind.RelativeOrAbsolute) && pathFTP.Text.IndexOfAny(invChars) > 0)
+            else if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.RelativeOrAbsolute) || pathFTP.Text.IndexOfAny(invChars) > 0)
             {
                 MessageBox.Show("Неверный путь! PathFTP");
                 StateActive();
@@ -85,11 +88,11 @@ namespace DedicatedFTPServerValheim
             this.Cursor = Cursors.WaitCursor;
             Ftp = new FtpConnect(pathFTP.Text);
             await Ftp.LoadFiles(pathTemp.Text, progressFileLoading);
+
             await Task.Delay(1000);
-            progressBarFtp.Visible = false;
-            progressBarFtp.Value = 0;
+            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
             this.Cursor = Cursors.Default;
-            tempBatPath = CreateTempBat(pathBat.Text ,pathTemp.Text, NameBat);
+            tempBatPath = CreateTempBat(pathBat.Text, pathTemp.Text, NameBat);
 
             HandleBat = new Process();
             HandleBat.StartInfo.FileName = "cmd.exe";
@@ -101,6 +104,7 @@ namespace DedicatedFTPServerValheim
         private string CreateTempBat(string pathBat, string pathNewTempDir, string nameBat)
         {
             using TextReader sr = new StreamReader(pathBat);
+            pathNewTempDir = pathNewTempDir.Replace("\\", "/");
             string bat = sr.ReadToEnd();
             var indSave = bat.IndexOf("-savedir");
             if (indSave != -1)
@@ -114,7 +118,7 @@ namespace DedicatedFTPServerValheim
             {
                 var ind = bat.LastIndexOf("valheim_server");
                 var lastInd = ind + "valheim_server".Length;
-                bat = bat.Insert(lastInd,$" -savedir \"{pathNewTempDir}\"");
+                bat = bat.Insert(lastInd, $" -savedir \"{pathNewTempDir}\"");
             }
             string newBatPath = Path.Combine(Path.GetDirectoryName(pathBat), nameBat);
             using StreamWriter wr = new StreamWriter(newBatPath);
@@ -126,27 +130,31 @@ namespace DedicatedFTPServerValheim
         private void StateUnactive()
         {
             pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = false;
-            progressBarFtp.Visible = true;
         }
         private void StateActive()
         {
             pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = true;
-            progressBarFtp.Visible = false;
         }
 
-        private void ButtonStop_Click(object sender, EventArgs e)
+        private async void ButtonStop_Click(object sender, EventArgs e)
         {
+            if (Ftp is null) { return; }
             StateActive();
+            progressBarFtp.Visible = true; progressBarFtp.Value = 0;
             HandleBat?.CloseMainWindow();
             HandleBat?.WaitForExit();
             HandleBat?.Dispose();
             if (File.Exists(tempBatPath))
-            File.Delete(tempBatPath);
+                File.Delete(tempBatPath);
             if (Ftp?.ListFiles == null)
                 MessageBox.Show("Загузка не произведена, файлов нет в памяти!");
 
-            Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
-            
+            if (MessageBox.Show("Перезаписать файлы на сервере?", null, MessageBoxButtons.YesNo) == DialogResult.No)
+                return;
+            await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
+            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
+            Ftp = null;
+
         }
         private void label4_Click(object sender, EventArgs e)
         {
