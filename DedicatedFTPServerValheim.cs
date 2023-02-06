@@ -10,7 +10,8 @@ namespace DedicatedFTPServerValheim
     public partial class DedicatedFTPServerValheim : Form
     {
         Progress<int> progressFileLoading;
-        string NameBat = "StartDedicatedServerFromFtp.bat";
+
+        readonly string NameBat = "StartDedicatedServerFromFtp.bat";
         string tempBatPath { get; set; }
         Process HandleBat { get; set; }
 
@@ -87,8 +88,25 @@ namespace DedicatedFTPServerValheim
 
             this.Cursor = Cursors.WaitCursor;
             Ftp = new FtpConnect(pathFTP.Text);
-            await Ftp.LoadFiles(pathTemp.Text, progressFileLoading);
-
+            try
+            {
+                await Ftp.LoadFiles(pathTemp.Text, progressFileLoading);
+            }
+            catch (WebException wEx)
+            {
+                if ((wEx.Response as FtpWebResponse).StatusCode == FtpStatusCode.NotLoggedIn)
+                {
+                    MessageBox.Show("Неверный логин или пароль!");
+                    StateActive();
+                    return;
+                }
+                else
+                {
+                    MessageBox.Show("Ошибка подключения к ftp..." + wEx.Message);
+                    StateActive();
+                    return;
+                }
+            }
             await Task.Delay(1000);
             progressBarFtp.Visible = false; progressBarFtp.Value = 0;
             this.Cursor = Cursors.Default;
@@ -134,12 +152,12 @@ namespace DedicatedFTPServerValheim
         private void StateActive()
         {
             pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = true;
+            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
         }
 
         private async void ButtonStop_Click(object sender, EventArgs e)
         {
             if (Ftp is null) { return; }
-            StateActive();
             progressBarFtp.Visible = true; progressBarFtp.Value = 0;
             HandleBat?.CloseMainWindow();
             HandleBat?.WaitForExit();
@@ -152,8 +170,8 @@ namespace DedicatedFTPServerValheim
             if (MessageBox.Show("Перезаписать файлы на сервере?", null, MessageBoxButtons.YesNo) == DialogResult.No)
                 return;
             await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
-            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
-            Ftp = null;
+            Ftp = null; 
+            StateActive();
 
         }
         private void label4_Click(object sender, EventArgs e)

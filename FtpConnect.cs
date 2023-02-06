@@ -176,8 +176,13 @@ namespace DedicatedFTPServerValheim
 
         public async Task UploadFilesBack(string pathTempDirectory, IProgress<int> progress)
         {
-            List<string> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(ListFiles);
-            List<string> directories = DirectoryModel.GetDirectoryRecursive(ListFiles);
+            List<string> TempDirectory = Directory.GetDirectories(pathTempDirectory, "*", SearchOption.AllDirectories).ToList();
+            List<string> filesInTempDirectory = Directory.GetFiles(pathTempDirectory, "", SearchOption.AllDirectories).ToList();
+            //FTPLISTS
+            //List<string> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(ListFiles);
+            //List<string> directories = DirectoryModel.GetDirectoryRecursive(ListFiles);
+            var directories = TempDirectory.Select(x => Path.GetRelativePath(pathTempDirectory, x)).Select(x => new Uri(_url, x).OriginalString).ToList();
+            var filesAll = filesInTempDirectory.Select(x => Path.GetRelativePath(pathTempDirectory, x)).Select(x => new Uri(_url, x).OriginalString).ToList();
             foreach (var path in directories)
             {
                 CreateDirectoryFtp(path);
@@ -187,7 +192,7 @@ namespace DedicatedFTPServerValheim
             foreach (string file in filesAll)
             {
                 Uri fileNameUri = new Uri(file);
-                var tempPath = Path.Combine(pathTempDirectory, _url.MakeRelativeUri(fileNameUri).OriginalString.Replace("/", "\\"));
+                var tempPath = Path.Combine(pathTempDirectory, _url.MakeRelativeUri(fileNameUri).OriginalString);
                 if (!File.Exists(tempPath))
                     throw new Exception("Не найден файл " + tempPath);
                 await Task.Run(()=>UploadFileFtp(tempPath, fileNameUri));
