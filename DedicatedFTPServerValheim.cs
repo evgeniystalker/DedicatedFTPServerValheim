@@ -1,9 +1,11 @@
 using Microsoft.Win32.SafeHandles;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Net;
 using System.Security.Policy;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Status;
 
 namespace DedicatedFTPServerValheim
 {
@@ -11,23 +13,25 @@ namespace DedicatedFTPServerValheim
     {
         Progress<int> progressFileLoading;
 
-        readonly string NameBat = "StartDedicatedServerFromFtp.bat";
-        string tempBatPath { get; set; }
-        Process HandleBat { get; set; }
+        internal BatModel Bat { get; set; }
+
+        Process HandleBatCmd { get; set; }
+
 
         FtpConnect Ftp;
+
         public DedicatedFTPServerValheim()
         {
             InitializeComponent();
             pathBat.Text = Properties.Settings.Default.PathBat;
-            pathFTP.Text = Properties.Settings.Default.PathFTP;
             pathTemp.Text = Properties.Settings.Default.PathTemp;
+            pathFTP.Text = Properties.Settings.Default.PathFTP;
             progressFileLoading = new Progress<int>(prog =>
             {
                 progressBarFtp.Value = prog;
             });
-            this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
-
+            if (!Properties.Settings.Default.DisplayPostion.IsEmpty)
+                this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
         }
 
         private void buttonPathBat_Click(object sender, EventArgs e)
@@ -49,14 +53,14 @@ namespace DedicatedFTPServerValheim
         {
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             dialog.Description = "Выберите папку для сохранения временных файлов.";
-            dialog.SelectedPath = Properties.Settings.Default.PathTemp;
+            dialog.ShowNewFolderButton = true;
+            dialog.InitialDirectory = Properties.Settings.Default.PathTemp;
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 pathTemp.Text = dialog.SelectedPath;
                 Properties.Settings.Default.PathTemp = dialog.SelectedPath;
                 Properties.Settings.Default.Save();
             }
-
         }
 
         private async void ButtonStart_Click(object sender, EventArgs e)
@@ -79,11 +83,15 @@ namespace DedicatedFTPServerValheim
                 StateActive();
                 return;
             }
-            else if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.RelativeOrAbsolute) || pathFTP.Text.IndexOfAny(invChars) > 0)
+            else if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.Absolute) || pathFTP.Text.IndexOfAny(invChars) > 0)
             {
                 MessageBox.Show("Неверный путь! PathFTP");
                 StateActive();
                 return;
+            }
+            else if (!pathFTP.Text.EndsWith('/'))
+            {
+                pathFTP.Text += '/';
             }
 
             this.Cursor = Cursors.WaitCursor;
@@ -110,40 +118,22 @@ namespace DedicatedFTPServerValheim
             await Task.Delay(1000);
             progressBarFtp.Visible = false; progressBarFtp.Value = 0;
             this.Cursor = Cursors.Default;
-            tempBatPath = CreateTempBat(pathBat.Text, pathTemp.Text, NameBat);
+            if (!File.Exists(Path.Combine(pathTemp.Text, "worlds_local", Bat.SettingBatModel?.World+".db")))
+                if (MessageBox.Show($"Мир не найден во временной папке. Проверьте имя мира. Или создать новый с именем \"{Bat.SettingBatModel?.World}\"?", null, MessageBoxButtons.YesNo) == DialogResult.No)
+                {
+                    StateActive();
+                    return;
+                }
 
-            HandleBat = new Process();
-            HandleBat.StartInfo.FileName = "cmd.exe";
-            HandleBat.StartInfo.WorkingDirectory = Path.GetDirectoryName(tempBatPath);
-            HandleBat.StartInfo.Arguments = $"/C \"{tempBatPath}\"";
-            HandleBat.Start();
+
+            Bat.CreateTempBat();
+            HandleBatCmd = new Process();
+            HandleBatCmd.StartInfo.FileName = "cmd.exe";
+            HandleBatCmd.StartInfo.WorkingDirectory = Path.GetDirectoryName(Bat.TempBatPath);
+            HandleBatCmd.StartInfo.Arguments = $"/C \"{Bat.TempBatPath}\"";
+            HandleBatCmd.Start();
         }
 
-        private string CreateTempBat(string pathBat, string pathNewTempDir, string nameBat)
-        {
-            using TextReader sr = new StreamReader(pathBat);
-            pathNewTempDir = pathNewTempDir.Replace("\\", "/");
-            string bat = sr.ReadToEnd();
-            var indSave = bat.IndexOf("-savedir");
-            if (indSave != -1)
-            {
-                var indStart = bat.IndexOf("\"", indSave) + 1;
-                var indEnd = bat.IndexOf("\"", indStart);
-                var oldppath = bat.Substring(indStart, indEnd - indStart);
-                bat = bat.Replace(oldppath, pathNewTempDir);
-            }
-            else
-            {
-                var ind = bat.LastIndexOf("valheim_server");
-                var lastInd = ind + "valheim_server".Length;
-                bat = bat.Insert(lastInd, $" -savedir \"{pathNewTempDir}\"");
-            }
-            string newBatPath = Path.Combine(Path.GetDirectoryName(pathBat), nameBat);
-            using StreamWriter wr = new StreamWriter(newBatPath);
-            wr.Write(bat);
-            wr.Flush();
-            return newBatPath;
-        }
 
         private void StateUnactive()
         {
@@ -159,18 +149,17 @@ namespace DedicatedFTPServerValheim
         {
             if (Ftp is null) { return; }
             progressBarFtp.Visible = true; progressBarFtp.Value = 0;
-            HandleBat?.CloseMainWindow();
-            HandleBat?.WaitForExit();
-            HandleBat?.Dispose();
-            if (File.Exists(tempBatPath))
-                File.Delete(tempBatPath);
+            HandleBatCmd?.CloseMainWindow();
+            HandleBatCmd?.WaitForExit();
+            HandleBatCmd?.Dispose();
+            if (File.Exists(Bat?.TempBatPath))
+                File.Delete(Bat.TempBatPath);
             if (Ftp?.ListFiles == null)
                 MessageBox.Show("Загузка не произведена, файлов нет в памяти!");
 
-            if (MessageBox.Show("Перезаписать файлы на сервере?", null, MessageBoxButtons.YesNo) == DialogResult.No)
-                return;
-            await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
-            Ftp = null; 
+            if (MessageBox.Show("Перезаписать файлы на сервере?", null, MessageBoxButtons.YesNo) == DialogResult.Yes)
+                await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
+            Ftp = null;
             StateActive();
 
         }
@@ -183,6 +172,11 @@ namespace DedicatedFTPServerValheim
 
         private void LabelCheck_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
+            if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.Absolute) || pathFTP.Text.IndexOfAny(Path.GetInvalidPathChars()) > 0)
+            {
+                MessageBox.Show("Неверный путь! PathFTP");
+                return;
+            }
             Properties.Settings.Default.Save();
             FtpConnect ftp = new FtpConnect(pathFTP.Text);
             MessageBox.Show(ftp.TryConnect());
@@ -197,7 +191,63 @@ namespace DedicatedFTPServerValheim
         private void DedicatedFTPServerValheim_LocationChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.DisplayPostion = this.DesktopLocation;
-            Properties.Settings.Default.Save();
+        }
+
+        private void pathBat_TextChanged(object sender, EventArgs e)
+        {
+            if (File.Exists(pathBat.Text) && Path.GetExtension(pathBat.Text) == ".bat")
+            {
+                Bat = new BatModel("StartDedicatedServerFromFtp.bat") { savedirParameter = pathTemp.Text };
+                if (!Properties.Settings.Default.SaveParamFlag)
+                {
+                    Bat.LoadBatSettings(pathBat.Text);
+                }
+                else
+                {
+                    Bat.LoadPropertySettings(pathBat.Text, Properties.Settings.Default.ParamsBat);
+                }
+                linkLabelSettings.Enabled = true;
+            }
+            else
+                linkLabelSettings.Enabled = false;
+        }
+
+        private void linkLabelSettings_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            if (!Bat.SettingBatModel.HasValue)
+            {
+                MessageBox.Show("Настройки из .bat не загружены, возможно неверный файл! Будут загружены по умолчанию.");
+                Bat.SettingBatModel = new SettingModel();
+            }
+            SettingsBatForm settingBatForm = new SettingsBatForm(Bat.SettingBatModel.Value);
+            settingBatForm.Owner = this;
+            if (settingBatForm.ShowDialog() == DialogResult.OK && Properties.Settings.Default.SaveParamFlag)
+            {
+                StringCollection sett = new StringCollection
+                {
+                    settingBatForm.SettingModel.Name,
+                    settingBatForm.SettingModel.World,
+                    settingBatForm.SettingModel.Password,
+                    settingBatForm.SettingModel.Port.ToString(),
+                    settingBatForm.SettingModel.Nographics.ToString(),
+                    settingBatForm.SettingModel.Batchmode.ToString(),
+                    settingBatForm.SettingModel.Crossplay.ToString()
+                };
+                Properties.Settings.Default.ParamsBat = sett;
+                Properties.Settings.Default.Save();
+            }
+        }
+
+        private void resetSettingAplicationToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Reset();
+            System.Windows.Forms.Application.Restart();
+        }
+
+        private void pathTemp_TextChanged(object sender, EventArgs e)
+        {
+            if(Bat is not null)
+            Bat.savedirParameter = pathTemp.Text;
         }
     }
 }

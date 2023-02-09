@@ -7,6 +7,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>IconValheim.ico</ApplicationIcon>
+    <Copyright>Kudik Evgeniy Copyright</Copyright>
+    <RepositoryUrl>https://github.com/evgeniystalker/DedicatedFTPServerValheim.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>

@@ -30,6 +30,7 @@ namespace DedicatedFTPServerValheim
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DedicatedFTPServerValheim));
             this.label1 = new System.Windows.Forms.Label();
             this.pathBat = new System.Windows.Forms.TextBox();
@@ -44,6 +45,10 @@ namespace DedicatedFTPServerValheim
             this.label4 = new System.Windows.Forms.Label();
             this.LabelCheck = new System.Windows.Forms.LinkLabel();
             this.progressBarFtp = new System.Windows.Forms.ProgressBar();
+            this.linkLabelSettings = new System.Windows.Forms.LinkLabel();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.resetSettingAplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -61,6 +66,7 @@ namespace DedicatedFTPServerValheim
             this.pathBat.Name = "pathBat";
             this.pathBat.Size = new System.Drawing.Size(350, 23);
             this.pathBat.TabIndex = 5;
+            this.pathBat.TextChanged += new System.EventHandler(this.pathBat_TextChanged);
             // 
             // label2
             // 
@@ -94,6 +100,7 @@ namespace DedicatedFTPServerValheim
             this.pathTemp.Name = "pathTemp";
             this.pathTemp.Size = new System.Drawing.Size(350, 23);
             this.pathTemp.TabIndex = 7;
+            this.pathTemp.TextChanged += new System.EventHandler(this.pathTemp_TextChanged);
             // 
             // buttonPathBat
             // 
@@ -169,11 +176,42 @@ namespace DedicatedFTPServerValheim
             this.progressBarFtp.TabIndex = 13;
             this.progressBarFtp.Visible = false;
             // 
+            // linkLabelSettings
+            // 
+            this.linkLabelSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.linkLabelSettings.AutoEllipsis = true;
+            this.linkLabelSettings.AutoSize = true;
+            this.linkLabelSettings.Enabled = false;
+            this.linkLabelSettings.Location = new System.Drawing.Point(473, 146);
+            this.linkLabelSettings.Margin = new System.Windows.Forms.Padding(0);
+            this.linkLabelSettings.Name = "linkLabelSettings";
+            this.linkLabelSettings.Size = new System.Drawing.Size(89, 15);
+            this.linkLabelSettings.TabIndex = 14;
+            this.linkLabelSettings.TabStop = true;
+            this.linkLabelSettings.Text = "Настройка .bat";
+            this.linkLabelSettings.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelSettings_LinkClicked);
+            // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.resetSettingAplicationToolStripMenuItem});
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(197, 26);
+            // 
+            // resetSettingAplicationToolStripMenuItem
+            // 
+            this.resetSettingAplicationToolStripMenuItem.Name = "resetSettingAplicationToolStripMenuItem";
+            this.resetSettingAplicationToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
+            this.resetSettingAplicationToolStripMenuItem.Text = "Reset setting aplication";
+            this.resetSettingAplicationToolStripMenuItem.Click += new System.EventHandler(this.resetSettingAplicationToolStripMenuItem_Click);
+            // 
             // DedicatedFTPServerValheim
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(585, 197);
+            this.ContextMenuStrip = this.contextMenuStrip1;
+            this.Controls.Add(this.linkLabelSettings);
             this.Controls.Add(this.LabelCheck);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.ButtonStop);
@@ -195,6 +233,7 @@ namespace DedicatedFTPServerValheim
             this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "DedicatedFTPServerValheim";
             this.LocationChanged += new System.EventHandler(this.DedicatedFTPServerValheim_LocationChanged);
+            this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -215,5 +254,8 @@ namespace DedicatedFTPServerValheim
         private Label label4;
         private LinkLabel LabelCheck;
         private ProgressBar progressBarFtp;
+        private LinkLabel linkLabelSettings;
+        private ContextMenuStrip contextMenuStrip1;
+        private ToolStripMenuItem resetSettingAplicationToolStripMenuItem;
     }
 }
