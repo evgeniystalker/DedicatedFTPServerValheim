@@ -42,12 +42,12 @@ namespace DedicatedFTPServerValheim
             this.buttonPathTemp = new System.Windows.Forms.Button();
             this.ButtonStart = new System.Windows.Forms.Button();
             this.ButtonStop = new System.Windows.Forms.Button();
-            this.label4 = new System.Windows.Forms.Label();
             this.LabelCheck = new System.Windows.Forms.LinkLabel();
-            this.progressBarFtp = new System.Windows.Forms.ProgressBar();
+            this.progressBarFtp = new CustomControls.CustomProgressBar();
             this.linkLabelSettings = new System.Windows.Forms.LinkLabel();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.resetSettingAplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fileInfoDateTime = new System.Windows.Forms.Label();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -144,16 +144,6 @@ namespace DedicatedFTPServerValheim
             this.ButtonStop.UseVisualStyleBackColor = true;
             this.ButtonStop.Click += new System.EventHandler(this.ButtonStop_Click);
             // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(420, 172);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(150, 15);
-            this.label4.TabIndex = 11;
-            this.label4.Text = "Василий понятное дело ...";
-            this.label4.Click += new System.EventHandler(this.label4_Click);
-            // 
             // LabelCheck
             // 
             this.LabelCheck.AutoSize = true;
@@ -168,12 +158,17 @@ namespace DedicatedFTPServerValheim
             // 
             // progressBarFtp
             // 
+            this.progressBarFtp.CustomText = "";
             this.progressBarFtp.Location = new System.Drawing.Point(181, 57);
+            this.progressBarFtp.Maximum = 1000;
             this.progressBarFtp.Name = "progressBarFtp";
+            this.progressBarFtp.ProgressColor = System.Drawing.Color.LightGreen;
             this.progressBarFtp.Size = new System.Drawing.Size(350, 23);
             this.progressBarFtp.Step = 1;
             this.progressBarFtp.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.progressBarFtp.TabIndex = 13;
+            this.progressBarFtp.TextColor = System.Drawing.Color.Black;
+            this.progressBarFtp.TextFont = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.progressBarFtp.Visible = false;
             // 
             // linkLabelSettings
@@ -185,10 +180,10 @@ namespace DedicatedFTPServerValheim
             this.linkLabelSettings.Location = new System.Drawing.Point(473, 146);
             this.linkLabelSettings.Margin = new System.Windows.Forms.Padding(0);
             this.linkLabelSettings.Name = "linkLabelSettings";
-            this.linkLabelSettings.Size = new System.Drawing.Size(89, 15);
+            this.linkLabelSettings.Size = new System.Drawing.Size(90, 15);
             this.linkLabelSettings.TabIndex = 14;
             this.linkLabelSettings.TabStop = true;
-            this.linkLabelSettings.Text = "Настройка .bat";
+            this.linkLabelSettings.Text = "Настройки .bat";
             this.linkLabelSettings.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelSettings_LinkClicked);
             // 
             // contextMenuStrip1
@@ -205,15 +200,25 @@ namespace DedicatedFTPServerValheim
             this.resetSettingAplicationToolStripMenuItem.Text = "Reset setting aplication";
             this.resetSettingAplicationToolStripMenuItem.Click += new System.EventHandler(this.resetSettingAplicationToolStripMenuItem_Click);
             // 
+            // fileInfoDateTime
+            // 
+            this.fileInfoDateTime.AutoSize = true;
+            this.fileInfoDateTime.Location = new System.Drawing.Point(20, 143);
+            this.fileInfoDateTime.Name = "fileInfoDateTime";
+            this.fileInfoDateTime.Size = new System.Drawing.Size(95, 30);
+            this.fileInfoDateTime.TabIndex = 15;
+            this.fileInfoDateTime.Text = "Дата изменения\r\nфайлов на FTP:\r\n";
+            this.fileInfoDateTime.Visible = false;
+            // 
             // DedicatedFTPServerValheim
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(585, 197);
             this.ContextMenuStrip = this.contextMenuStrip1;
+            this.Controls.Add(this.fileInfoDateTime);
             this.Controls.Add(this.linkLabelSettings);
             this.Controls.Add(this.LabelCheck);
-            this.Controls.Add(this.label4);
             this.Controls.Add(this.ButtonStop);
             this.Controls.Add(this.ButtonStart);
             this.Controls.Add(this.buttonPathTemp);
@@ -251,11 +256,11 @@ namespace DedicatedFTPServerValheim
         private Button buttonPathTemp;
         private Button ButtonStart;
         private Button ButtonStop;
-        private Label label4;
         private LinkLabel LabelCheck;
-        private ProgressBar progressBarFtp;
+        private CustomControls.CustomProgressBar progressBarFtp;
         private LinkLabel linkLabelSettings;
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem resetSettingAplicationToolStripMenuItem;
+        private Label fileInfoDateTime;
     }
 }

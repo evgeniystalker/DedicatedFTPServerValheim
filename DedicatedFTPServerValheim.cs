@@ -1,17 +1,15 @@
-using Microsoft.Win32.SafeHandles;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
 using System.Net;
-using System.Security.Policy;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Status;
 
 namespace DedicatedFTPServerValheim
 {
     public partial class DedicatedFTPServerValheim : Form
     {
-        Progress<int> progressFileLoading;
+        /// <summary>
+        /// Общий прогресс, имя файла, прогресс файла
+        /// </summary>
+        Progress<(float, string, float)> progressFileLoading;
 
         internal BatModel Bat { get; set; }
 
@@ -26,10 +24,14 @@ namespace DedicatedFTPServerValheim
             pathBat.Text = Properties.Settings.Default.PathBat;
             pathTemp.Text = Properties.Settings.Default.PathTemp;
             pathFTP.Text = Properties.Settings.Default.PathFTP;
-            progressFileLoading = new Progress<int>(prog =>
+
+            progressFileLoading = new Progress<(float, string, float)>(prog =>
             {
-                progressBarFtp.Value = prog;
+                progressBarFtp.CustomText = $"{prog.Item2} {(int)(prog.Item3 * 100)}%";
+                progressBarFtp.Value = (int)(prog.Item1 * progressBarFtp.Maximum);
+                progressBarFtp.Refresh();
             });
+
             if (!Properties.Settings.Default.DisplayPostion.IsEmpty)
                 this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
         }
@@ -43,6 +45,7 @@ namespace DedicatedFTPServerValheim
             dialog.Title = "Выбор .bat файла";
             if (dialog.ShowDialog() == DialogResult.OK)
             {
+                pathBat.Clear();
                 pathBat.Text = dialog.FileName;
                 Properties.Settings.Default.PathBat = dialog.FileName;
                 Properties.Settings.Default.Save();
@@ -57,6 +60,7 @@ namespace DedicatedFTPServerValheim
             dialog.InitialDirectory = Properties.Settings.Default.PathTemp;
             if (dialog.ShowDialog() == DialogResult.OK)
             {
+                pathTemp.Clear();
                 pathTemp.Text = dialog.SelectedPath;
                 Properties.Settings.Default.PathTemp = dialog.SelectedPath;
                 Properties.Settings.Default.Save();
@@ -67,8 +71,7 @@ namespace DedicatedFTPServerValheim
         {
             Properties.Settings.Default.Save();
             StateUnactive();
-            progressBarFtp.Visible = true;
-            progressBarFtp.Value = 0;
+
             var invChars = Path.GetInvalidPathChars();
 
             if (!File.Exists(pathBat.Text) || pathBat.Text.IndexOfAny(invChars) > 0)
@@ -93,9 +96,11 @@ namespace DedicatedFTPServerValheim
             {
                 pathFTP.Text += '/';
             }
+            StateFileDownload();
 
-            this.Cursor = Cursors.WaitCursor;
             Ftp = new FtpConnect(pathFTP.Text);
+            Ftp.DateTimeChanged += (data) => { fileInfoDateTime.Text = $"Дата изменения\r\nфайлов на FTP:\r\n{data}"; fileInfoDateTime.Visible = true; };
+            Ftp.SaveOwerrideShowWindow += dialog => this.Invoke(() => TaskDialog.ShowDialog(this, dialog));
             try
             {
                 await Ftp.LoadFiles(pathTemp.Text, progressFileLoading);
@@ -116,9 +121,8 @@ namespace DedicatedFTPServerValheim
                 }
             }
             await Task.Delay(1000);
-            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
-            this.Cursor = Cursors.Default;
-            if (!File.Exists(Path.Combine(pathTemp.Text, "worlds_local", Bat.SettingBatModel?.World+".db")))
+            StateFileDownloadComlite();
+            if (!File.Exists(Path.Combine(pathTemp.Text, "worlds_local", Bat.SettingBatModel?.World + ".db")))
                 if (MessageBox.Show($"Мир не найден во временной папке. Проверьте имя мира. Или создать новый с именем \"{Bat.SettingBatModel?.World}\"?", null, MessageBoxButtons.YesNo) == DialogResult.No)
                 {
                     StateActive();
@@ -142,14 +146,31 @@ namespace DedicatedFTPServerValheim
         private void StateActive()
         {
             pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = true;
-            progressBarFtp.Visible = false; progressBarFtp.Value = 0;
+            fileInfoDateTime.Visible = false;
+            StateFileDownloadComlite();
+        }
+        private void StateFileDownload()
+        {
+            progressBarFtp.Visible = true;
+            progressBarFtp.Value = 0;
+            //fileInfoLoading.Text = ""; fileInfoLoading.Visible = true;
+            this.Cursor = Cursors.WaitCursor;
+        }
+        private void StateFileDownloadComlite()
+        {
+            progressBarFtp.Visible = false;
+            progressBarFtp.Value = 0; progressBarFtp.CustomText = "";
+            //fileInfoLoading.Text = ""; fileInfoLoading.Visible = false;
+            this.Cursor = Cursors.Default;
         }
 
         private async void ButtonStop_Click(object sender, EventArgs e)
         {
             if (Ftp is null) { return; }
-            progressBarFtp.Visible = true; progressBarFtp.Value = 0;
-            HandleBatCmd?.CloseMainWindow();
+            StateFileDownload();
+            if (HandleBatCmd != null && !HandleBatCmd.HasExited && MessageBox.Show("Сервер не завершил работу.\nРекомендуется завершить работу через CTRL + C.\nЗвавершить принудительно?", "Внимание", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                HandleBatCmd?.CloseMainWindow();
+
             HandleBatCmd?.WaitForExit();
             HandleBatCmd?.Dispose();
             if (File.Exists(Bat?.TempBatPath))
@@ -161,14 +182,7 @@ namespace DedicatedFTPServerValheim
                 await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
             Ftp = null;
             StateActive();
-
         }
-        private void label4_Click(object sender, EventArgs e)
-        {
-            label4.Text = label4.Text.Replace("...", "рак)");
-        }
-
-
 
         private void LabelCheck_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
@@ -246,8 +260,9 @@ namespace DedicatedFTPServerValheim
 
         private void pathTemp_TextChanged(object sender, EventArgs e)
         {
-            if(Bat is not null)
-            Bat.savedirParameter = pathTemp.Text;
+            if (Bat is not null)
+                Bat.savedirParameter = pathTemp.Text;
         }
+
     }
 }

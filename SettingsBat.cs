@@ -39,6 +39,7 @@ namespace DedicatedFTPServerValheim
 
         private void buttonOk_Click(object sender, EventArgs e)
         {
+            Properties.Settings.Default.SaveParamFlag = checkBoxSaveBat.Checked;
             Int32.TryParse(textBoxPort.Text, out int port);
             SettingModel = new SettingModel(textBoxName.Text, port, textBoxWorld.Text, textBoxPassword.Text, checkBoxNoGraphics.Checked, checkBoxBatchMode.Checked, checkBoxCrossPlay.Checked, (Owner as DedicatedFTPServerValheim).Bat.savedirParameter);
             (Owner as DedicatedFTPServerValheim).Bat.SettingBatModel = SettingModel;
@@ -58,11 +59,6 @@ namespace DedicatedFTPServerValheim
         private void textBoxPassword_Leave(object sender, EventArgs e)
         {
             textBoxPassword.UseSystemPasswordChar = true;
-        }
-
-        private void checkBoxSaveBat_CheckedChanged(object sender, EventArgs e)
-        {
-            Properties.Settings.Default.SaveParamFlag = checkBoxSaveBat.Checked;
         }
 
         private void resetSettingsToolStripMenuItem_Click(object sender, EventArgs e)

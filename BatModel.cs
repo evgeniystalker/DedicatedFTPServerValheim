@@ -75,7 +75,8 @@ namespace DedicatedFTPServerValheim
             if (!SettingBatModel.HasValue)
                 throw new Exception("Ошибка. Нет параметоров!");
 
-            var sett = this.SettingBatModel.Value;
+            SettingBatModel = SettingBatModel.Value with { Savedir = savedirParameter };
+
             foreach (var param in SettingModel.GetNameAllParams())
             {
                 if (SettingModel.GetNamesParams<bool>().Contains(param))
@@ -313,7 +314,7 @@ namespace DedicatedFTPServerValheim
         }
         public static string[] GetNameAllParams()
         {
-            return intParams.Concat(stringParams).Concat(boolParams).ToArray(); ;
+            return boolParams.Concat(stringParams).Concat(intParams).ToArray();
         }
         public static string[] GetNamesParams<T>()
         {
@@ -328,7 +329,7 @@ namespace DedicatedFTPServerValheim
 
         public T GetParamValue<T>(string name)
         {
-            if (name.Contains("-"))
+            if (name.Contains('-'))
                 name = name.Substring(1);
 
             name = char.ToUpper(name[0]) + name.Substring(1);

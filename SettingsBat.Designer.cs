@@ -187,7 +187,6 @@
             this.checkBoxSaveBat.TabIndex = 0;
             this.checkBoxSaveBat.Text = "Сохранять\r\nнастройки";
             this.checkBoxSaveBat.UseVisualStyleBackColor = true;
-            this.checkBoxSaveBat.CheckedChanged += new System.EventHandler(this.checkBoxSaveBat_CheckedChanged);
             // 
             // contextMenuStrip1
             // 
@@ -252,10 +251,6 @@
         private TextBox textBoxPassword;
         private CheckBox checkBoxBatchMode;
         private CheckBox checkBoxCrossPlay;
-        private StatusStrip statusStrip1;
-        private ToolStripStatusLabel toolStripStatusLabel1;
-        private ToolStripSplitButton toolStripSplitButton1;
-        private ToolStripMenuItem toolStripMenuItem1;
         private CheckBox checkBoxSaveBat;
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem resetSettingsToolStripMenuItem;
