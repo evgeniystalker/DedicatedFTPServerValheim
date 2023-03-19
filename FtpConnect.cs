@@ -10,7 +10,7 @@ namespace DedicatedFTPServerValheim
         private Uri _url { get; set; }
 
         private DirectoryModel _listFiles;
-        public DirectoryModel ListFiles
+        public DirectoryModel dirModel
         {
             get
             {
@@ -66,7 +66,7 @@ namespace DedicatedFTPServerValheim
                     if (!response.WelcomeMessage.Contains("230") && response.StatusCode != FtpStatusCode.FileStatus)
                         throw new Exception("Нвеверный код ответа при запросе даты");
 
-                    return response.LastModified;
+                    return response.LastModified.ToUniversalTime();
                 }
             }
             catch (Exception)
@@ -74,7 +74,7 @@ namespace DedicatedFTPServerValheim
                 throw;
             }
         }
-        private DirectoryModel LoadListDirectoryAndFiles(string pathDirectory)
+        private DirectoryModel LoadDirectoryModel(string pathDirectory)
         {
             DirectoryModel dir = new DirectoryModel(pathDirectory);
             List<string> listDirectory = GetResponseList(pathDirectory);
@@ -88,7 +88,7 @@ namespace DedicatedFTPServerValheim
                         string objectUrl = new Uri(_url, @object).ToString();
                         if (objectDet.StartsWith('d'))
                         {
-                            dir.Directories.Add(LoadListDirectoryAndFiles(objectUrl));
+                            dir.Directories.Add(LoadDirectoryModel(objectUrl));
                             break;
                         }
                         else if (objectDet.StartsWith("-r"))
@@ -103,20 +103,25 @@ namespace DedicatedFTPServerValheim
             return dir;
         }
 
-        public async Task LoadFiles(string pathSave, IProgress<(float, string, float)> progress)
+        public async Task LoadFiles(string pathSave, IProgress<(float, string, float)> progress, CancellationToken ct)
         {
-            ListFiles = LoadListDirectoryAndFiles(_url.OriginalString);
-            List<FileModel> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(ListFiles);
-            DateTimeChanged.Invoke(filesAll.Select(x=>x.DateTimeChangedFile).Max());
+            if (ct.IsCancellationRequested)
+                ct.ThrowIfCancellationRequested();
+            dirModel = LoadDirectoryModel(_url.OriginalString);
+            List<FileModel> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(dirModel);
+            DateTimeChanged.Invoke(filesAll.Select(x => x.DateTimeChangedFile).Max());
             int countFiles = 0;
             string fileName = "";
             Progress<float> progressOneFileLoading = new Progress<float>(prog =>
             {
-                progress.Report(((prog + countFiles)/ filesAll.Count, fileName, prog));
+                progress.Report(((prog + countFiles) / filesAll.Count, fileName, prog));
             });
 
             foreach (var file in filesAll)
             {
+                if (ct.IsCancellationRequested)
+                    ct.ThrowIfCancellationRequested();
+
                 fileName = file.FileName;
                 await Task.Run(() => GetFileFtp(file, pathSave, progressOneFileLoading));
                 countFiles++;
@@ -149,7 +154,7 @@ namespace DedicatedFTPServerValheim
         public void GetFileFtp(FileModel file, string pathSave, IProgress<float> progressOneFile)
         {
             Uri fileNameUri = new Uri(file.FilePath);
-            var tempPath = Path.Combine(pathSave, _url.MakeRelativeUri(fileNameUri).OriginalString.Replace("/", "\\"));
+            var tempPath = Path.Combine(pathSave, _url.MakeRelativeUri(fileNameUri).ToString().Replace("/", "\\"));
             var directoryName = Path.GetDirectoryName(tempPath);
 
             if (!Directory.Exists(directoryName))
@@ -162,7 +167,7 @@ namespace DedicatedFTPServerValheim
                     progressOneFile.Report(1);
                     return;
                 }
-                TaskDialogButtonCollection buttons = new TaskDialogButtonCollection() { new TaskDialogButton("Да"), new TaskDialogButton("Да для всех!"), new TaskDialogButton("Нет"), new TaskDialogButton("Нет для всех!")};
+                TaskDialogButtonCollection buttons = new TaskDialogButtonCollection() { new TaskDialogButton("Да"), new TaskDialogButton("Да для всех!"), new TaskDialogButton("Нет"), new TaskDialogButton("Нет для всех!"), new TaskDialogButton("Отмена") };
                 TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {file.FileName} {File.GetLastWriteTime(tempPath).ToString("G")} существует! Перезаписать на файл с изменениями {file.DateTimeChangedFile}?", Buttons = buttons };
                 var result = SaveOwerrideShowWindow.Invoke(dialog);
                 if (result == buttons[2])
@@ -178,35 +183,45 @@ namespace DedicatedFTPServerValheim
                     progressOneFile.Report(1);
                     return;
                 }
+                else if (result == buttons[4])
+                {
+                    throw new OperationCanceledException("Отмена операции");
+                }
             }
 
             FtpWebRequest ftpWeb = FtpWebRequest.Create(fileNameUri) as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.DownloadFile;
 
             ftpWeb.UseBinary = true;
+            ftpWeb.ConnectionGroupName = "DownloadFTP";
             using FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse;
             if (response.StatusDescription.Contains("150") && response.StatusCode == FtpStatusCode.OpeningData)
             {
                 using Stream streamResponse = response.GetResponseStream();
                 using FileStream writer = new FileStream(tempPath, FileMode.Create);
-                var bytesLenght = response.ContentLength;
-                
-                long countBytes = 1;
+
+                var lenghtBytes = response.ContentLength;
+                byte[] buffer = new byte[4096];
+
                 int oldPrecent = 0;
-                int byt = streamResponse.ReadByte();
-                while (byt != -1)
+                int numOfBytesRead = streamResponse.Read(buffer, 0, buffer.Length);
+                long countBytes = numOfBytesRead;
+                
+                while (numOfBytesRead != 0)
                 {
-                    writer.WriteByte((byte)byt);
-                    byt = streamResponse.ReadByte();
-                    int precent = (int)(countBytes++ * 100 / bytesLenght);
-                    
+                    writer.Write(buffer, 0, numOfBytesRead);
+                    numOfBytesRead = streamResponse.Read(buffer, 0, buffer.Length);
+                    int precent = (int)((countBytes += numOfBytesRead) * 100 / lenghtBytes);
+                  
                     if (precent != oldPrecent)
                     {
                         oldPrecent = precent;
-                        progressOneFile.Report(precent/100f);
+                        progressOneFile.Report(precent / 100f);
                     }
+                    
                 }
                 writer.Flush();
+                writer.Close();
             }
 
             void CreateDirRecur(string path)
@@ -221,7 +236,7 @@ namespace DedicatedFTPServerValheim
             }
         }
 
-        public async Task UploadFilesBack(string pathTempDirectory, IProgress<(float,string, float)> progress)
+        public async Task UploadFilesBack(string pathTempDirectory, IProgress<(float, string, float)> progress, CancellationToken token)
         {
             List<string> TempDirectory = Directory.GetDirectories(pathTempDirectory, "*", SearchOption.AllDirectories).ToList();
             List<string> filesInTempDirectory = Directory.GetFiles(pathTempDirectory, "", SearchOption.AllDirectories).ToList();
@@ -230,6 +245,10 @@ namespace DedicatedFTPServerValheim
             //List<string> directories = DirectoryModel.GetDirectoryRecursive(ListFiles);
             var directories = TempDirectory.Select(x => Path.GetRelativePath(pathTempDirectory, x)).Select(x => new Uri(_url, x).OriginalString).ToList();
             var filesAll = filesInTempDirectory.Select(x => Path.GetRelativePath(pathTempDirectory, x)).Select(x => new Uri(_url, x).OriginalString).ToList();
+
+            if (token.IsCancellationRequested)
+                token.ThrowIfCancellationRequested();
+
             foreach (var path in directories)
             {
                 CreateDirectoryFtp(path);
@@ -244,10 +263,11 @@ namespace DedicatedFTPServerValheim
 
             foreach (string file in filesAll)
             {
-
+                if (token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
                 fileName = Path.GetFileName(file);
                 Uri fileNameUri = new Uri(file);
-                var tempPath = Path.Combine(pathTempDirectory, _url.MakeRelativeUri(fileNameUri).OriginalString);
+                var tempPath = Path.Combine(pathTempDirectory, _url.MakeRelativeUri(fileNameUri).ToString());
                 if (!File.Exists(tempPath))
                     throw new Exception("Не найден файл " + tempPath);
                 await Task.Run(() => UploadFileFtp(tempPath, fileNameUri, progressOneFileUploading));
@@ -277,23 +297,26 @@ namespace DedicatedFTPServerValheim
             FtpWebRequest ftpWeb = FtpWebRequest.Create(filePathFtp) as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.UploadFile;
             ftpWeb.UseBinary = true;
+            ftpWeb.ConnectionGroupName = "UploadFTP";
+            using FileStream reader = new FileStream(filePathTemp, FileMode.Open);
+            var lenghtBytes = ftpWeb.ContentLength = reader.Length;
+
+            byte[] buffer = new byte[4096];
 
             using Stream streamRequest = ftpWeb.GetRequestStream();
-            using FileStream reader = new FileStream(filePathTemp, FileMode.Open);
-            ftpWeb.ContentLength = reader.Length;
-            int bit = reader.ReadByte();
-            int countBytes = 1;
+            int numOfBytesRead = reader.Read(buffer, 0, buffer.Length);
+            long countBytes = numOfBytesRead;
             int oldPrecent = 0;
-            while (bit != -1)
+            while (numOfBytesRead != 0)
             {
-                streamRequest.WriteByte((byte)bit);
-                bit = reader.ReadByte();
+                streamRequest.Write(buffer, 0, numOfBytesRead);
+                numOfBytesRead = reader.Read(buffer, 0, buffer.Length);
 
-                int precent = (int)(countBytes++ * 100 / ftpWeb.ContentLength);
+                int precent = (int)((countBytes += numOfBytesRead) * 100 / lenghtBytes);
                 if (precent != oldPrecent)
                 {
                     oldPrecent = precent;
-                    progressOneFile.Report(precent/100f);
+                    progressOneFile.Report(precent / 100f);
                 }
 
             }
@@ -302,7 +325,71 @@ namespace DedicatedFTPServerValheim
             using FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse;
             if (!response.StatusDescription.Contains("226") && response.StatusCode != FtpStatusCode.ClosingData)
             {
-                throw new Exception("Ошибка при загрзке файла " + filePathTemp);
+                throw new Exception("Ошибка при загрузке файла " + filePathTemp);
+            }
+        }
+        public async Task DeleteFilesFTP(IProgress<(float, string, float)> progress, CancellationToken ct)
+        {
+            if (ct.IsCancellationRequested)
+                ct.ThrowIfCancellationRequested();
+            dirModel = LoadDirectoryModel(_url.OriginalString);
+            List<FileModel> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(dirModel);
+            List<DirectoryModel> dirAll = DirectoryModel.GetDirectoryRecursive(dirModel);
+            DateTimeChanged.Invoke(filesAll.Select(x => x.DateTimeChangedFile).Max());
+            int count = 0;
+            foreach (var file in filesAll)
+            {
+                FtpWebRequest ftpWeb = FtpWebRequest.Create(file.FilePath) as FtpWebRequest;
+                ftpWeb.Method = WebRequestMethods.Ftp.DeleteFile;
+                FtpWebResponse response = (FtpWebResponse)await ftpWeb.GetResponseAsync();
+                if (!response.StatusDescription.Contains("250") && response.StatusCode != FtpStatusCode.FileActionOK)
+                {
+                    throw new Exception("Ошибка при удалении файла " + file.FilePath);
+                }
+                response.Close();
+
+                progress.Report((++count / (float)(filesAll.Count + dirAll.Count), "Удалено: " + file.FileName, 1));
+                if (ct.IsCancellationRequested)
+                    ct.ThrowIfCancellationRequested();
+            }
+            foreach (var dir in dirAll)
+            {
+                FtpWebRequest ftpWeb = FtpWebRequest.Create(dir.PathDirectory) as FtpWebRequest;
+                ftpWeb.Method = WebRequestMethods.Ftp.RemoveDirectory;
+                FtpWebResponse response = (FtpWebResponse)await ftpWeb.GetResponseAsync();
+                if (!response.StatusDescription.Contains("250") && response.StatusCode != FtpStatusCode.FileActionOK)
+                {
+                    throw new Exception("Ошибка при удалении директории " + dir.NameDirectory);
+                }
+                response.Close();
+                progress.Report((++count / (float)(filesAll.Count + dirAll.Count), "Удалено: " + dir.NameDirectory, 1));
+                if (ct.IsCancellationRequested)
+                    ct.ThrowIfCancellationRequested();
+            }
+        }
+        public async Task DeleteLocalFiles(string pathTempDirectory, IProgress<(float, string, float)> progress, CancellationToken ct)
+        {
+            List<string> TempDirectory = Directory.GetDirectories(pathTempDirectory, "*", SearchOption.AllDirectories).ToList();
+            List<string> filesInTempDirectory = Directory.GetFiles(pathTempDirectory, "", SearchOption.AllDirectories).ToList();
+
+            if (ct.IsCancellationRequested)
+                ct.ThrowIfCancellationRequested();
+            int count = 0;
+
+            foreach (var file in filesInTempDirectory)
+            {
+                await Task.Run(() => File.Delete(file));
+                progress.Report((++count / (float)(TempDirectory.Count + filesInTempDirectory.Count), "Удалено: " + Path.GetFileName(file), 1));
+                if (ct.IsCancellationRequested)
+                    ct.ThrowIfCancellationRequested();
+            }
+
+            foreach (var dir in TempDirectory)
+            {
+                await Task.Run(() => Directory.Delete(dir));
+                progress.Report((++count / (float)(TempDirectory.Count + filesInTempDirectory.Count), "Удалено: " + Path.GetDirectoryName(dir), 1));
+                if (ct.IsCancellationRequested)
+                    ct.ThrowIfCancellationRequested();
             }
         }
     }

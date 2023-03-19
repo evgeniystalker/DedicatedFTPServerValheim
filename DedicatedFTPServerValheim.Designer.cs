@@ -30,218 +30,252 @@ namespace DedicatedFTPServerValheim
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DedicatedFTPServerValheim));
-            this.label1 = new System.Windows.Forms.Label();
-            this.pathBat = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.pathFTP = new System.Windows.Forms.TextBox();
-            this.pathTemp = new System.Windows.Forms.TextBox();
-            this.buttonPathBat = new System.Windows.Forms.Button();
-            this.buttonPathTemp = new System.Windows.Forms.Button();
-            this.ButtonStart = new System.Windows.Forms.Button();
-            this.ButtonStop = new System.Windows.Forms.Button();
-            this.LabelCheck = new System.Windows.Forms.LinkLabel();
-            this.progressBarFtp = new CustomControls.CustomProgressBar();
-            this.linkLabelSettings = new System.Windows.Forms.LinkLabel();
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.resetSettingAplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.fileInfoDateTime = new System.Windows.Forms.Label();
-            this.contextMenuStrip1.SuspendLayout();
-            this.SuspendLayout();
+            label1 = new Label();
+            pathBat = new TextBox();
+            label2 = new Label();
+            label3 = new Label();
+            pathFTP = new TextBox();
+            pathTemp = new TextBox();
+            buttonPathBat = new Button();
+            buttonPathTemp = new Button();
+            ButtonStart = new Button();
+            ButtonStop = new Button();
+            LabelCheck = new LinkLabel();
+            progressBarFtp = new CustomControls.CustomProgressBar();
+            linkLabelSettings = new LinkLabel();
+            contextMenuStrip1 = new ContextMenuStrip(components);
+            resetSettingAplicationToolStripMenuItem = new ToolStripMenuItem();
+            fileInfoDateTime = new Label();
+            buttonUpload = new Button();
+            toolTip = new ToolTip(components);
+            cleanFilesCheckBox = new CheckBox();
+            contextMenuStrip1.SuspendLayout();
+            SuspendLayout();
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(20, 20);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(155, 15);
-            this.label1.TabIndex = 8;
-            this.label1.Text = "Путь к *.bat файлу сервера";
+            label1.AutoSize = true;
+            label1.Location = new Point(20, 20);
+            label1.Name = "label1";
+            label1.Size = new Size(155, 15);
+            label1.TabIndex = 8;
+            label1.Text = "Путь к *.bat файлу сервера";
             // 
             // pathBat
             // 
-            this.pathBat.Location = new System.Drawing.Point(181, 17);
-            this.pathBat.Name = "pathBat";
-            this.pathBat.Size = new System.Drawing.Size(350, 23);
-            this.pathBat.TabIndex = 5;
-            this.pathBat.TextChanged += new System.EventHandler(this.pathBat_TextChanged);
+            pathBat.Location = new Point(181, 17);
+            pathBat.Name = "pathBat";
+            pathBat.Size = new Size(350, 23);
+            pathBat.TabIndex = 5;
+            pathBat.TextChanged += pathBat_TextChanged;
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(20, 60);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(111, 15);
-            this.label2.TabIndex = 9;
-            this.label2.Text = "Путь к FTP серверу";
+            label2.AutoSize = true;
+            label2.Location = new Point(20, 60);
+            label2.Name = "label2";
+            label2.Size = new Size(111, 15);
+            label2.TabIndex = 9;
+            label2.Text = "Путь к FTP серверу";
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(20, 100);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(142, 15);
-            this.label3.TabIndex = 10;
-            this.label3.Text = "Путь к временной папке";
+            label3.AutoSize = true;
+            label3.Location = new Point(20, 100);
+            label3.Name = "label3";
+            label3.Size = new Size(142, 15);
+            label3.TabIndex = 10;
+            label3.Text = "Путь к временной папке";
             // 
             // pathFTP
             // 
-            this.pathFTP.Location = new System.Drawing.Point(181, 57);
-            this.pathFTP.Name = "pathFTP";
-            this.pathFTP.Size = new System.Drawing.Size(350, 23);
-            this.pathFTP.TabIndex = 6;
-            this.pathFTP.TextChanged += new System.EventHandler(this.pathFTP_TextChanged);
+            pathFTP.Location = new Point(181, 57);
+            pathFTP.Name = "pathFTP";
+            pathFTP.Size = new Size(350, 23);
+            pathFTP.TabIndex = 6;
+            pathFTP.TextChanged += pathFTP_TextChanged;
             // 
             // pathTemp
             // 
-            this.pathTemp.Location = new System.Drawing.Point(181, 97);
-            this.pathTemp.Name = "pathTemp";
-            this.pathTemp.Size = new System.Drawing.Size(350, 23);
-            this.pathTemp.TabIndex = 7;
-            this.pathTemp.TextChanged += new System.EventHandler(this.pathTemp_TextChanged);
+            pathTemp.Location = new Point(181, 97);
+            pathTemp.Name = "pathTemp";
+            pathTemp.Size = new Size(350, 23);
+            pathTemp.TabIndex = 7;
+            pathTemp.TextChanged += pathTemp_TextChanged;
             // 
             // buttonPathBat
             // 
-            this.buttonPathBat.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.buttonPathBat.Location = new System.Drawing.Point(537, 17);
-            this.buttonPathBat.Name = "buttonPathBat";
-            this.buttonPathBat.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.buttonPathBat.Size = new System.Drawing.Size(26, 25);
-            this.buttonPathBat.TabIndex = 2;
-            this.buttonPathBat.Text = "...";
-            this.buttonPathBat.UseVisualStyleBackColor = true;
-            this.buttonPathBat.Click += new System.EventHandler(this.buttonPathBat_Click);
+            buttonPathBat.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            buttonPathBat.Location = new Point(537, 17);
+            buttonPathBat.Name = "buttonPathBat";
+            buttonPathBat.RightToLeft = RightToLeft.No;
+            buttonPathBat.Size = new Size(26, 25);
+            buttonPathBat.TabIndex = 2;
+            buttonPathBat.Text = "...";
+            buttonPathBat.UseVisualStyleBackColor = true;
+            buttonPathBat.Click += buttonPathBat_Click;
             // 
             // buttonPathTemp
             // 
-            this.buttonPathTemp.Location = new System.Drawing.Point(537, 97);
-            this.buttonPathTemp.Name = "buttonPathTemp";
-            this.buttonPathTemp.Size = new System.Drawing.Size(25, 25);
-            this.buttonPathTemp.TabIndex = 4;
-            this.buttonPathTemp.Text = "...";
-            this.buttonPathTemp.UseVisualStyleBackColor = true;
-            this.buttonPathTemp.Click += new System.EventHandler(this.buttonPathTemp_Click);
+            buttonPathTemp.Location = new Point(537, 97);
+            buttonPathTemp.Name = "buttonPathTemp";
+            buttonPathTemp.Size = new Size(25, 25);
+            buttonPathTemp.TabIndex = 4;
+            buttonPathTemp.Text = "...";
+            buttonPathTemp.UseVisualStyleBackColor = true;
+            buttonPathTemp.Click += buttonPathTemp_Click;
             // 
             // ButtonStart
             // 
-            this.ButtonStart.Location = new System.Drawing.Point(150, 146);
-            this.ButtonStart.Name = "ButtonStart";
-            this.ButtonStart.Size = new System.Drawing.Size(75, 23);
-            this.ButtonStart.TabIndex = 0;
-            this.ButtonStart.Text = "Start";
-            this.ButtonStart.UseVisualStyleBackColor = true;
-            this.ButtonStart.Click += new System.EventHandler(this.ButtonStart_Click);
+            ButtonStart.Location = new Point(150, 146);
+            ButtonStart.Name = "ButtonStart";
+            ButtonStart.Size = new Size(75, 23);
+            ButtonStart.TabIndex = 0;
+            ButtonStart.Text = "Start";
+            toolTip.SetToolTip(ButtonStart, "Выгрузка файлов из FTP и запуск сервера.");
+            ButtonStart.UseVisualStyleBackColor = true;
+            ButtonStart.Click += ButtonStart_Click;
             // 
             // ButtonStop
             // 
-            this.ButtonStop.Location = new System.Drawing.Point(365, 146);
-            this.ButtonStop.Name = "ButtonStop";
-            this.ButtonStop.Size = new System.Drawing.Size(75, 23);
-            this.ButtonStop.TabIndex = 1;
-            this.ButtonStop.Text = "Stop";
-            this.ButtonStop.UseVisualStyleBackColor = true;
-            this.ButtonStop.Click += new System.EventHandler(this.ButtonStop_Click);
+            ButtonStop.Location = new Point(365, 146);
+            ButtonStop.Name = "ButtonStop";
+            ButtonStop.Size = new Size(75, 23);
+            ButtonStop.TabIndex = 1;
+            ButtonStop.Text = "Stop";
+            toolTip.SetToolTip(ButtonStop, "Остановить сервер и загрузить файлы на FTP.");
+            ButtonStop.UseVisualStyleBackColor = true;
+            ButtonStop.Click += ButtonStop_Click;
             // 
             // LabelCheck
             // 
-            this.LabelCheck.AutoSize = true;
-            this.LabelCheck.LinkColor = System.Drawing.Color.Black;
-            this.LabelCheck.Location = new System.Drawing.Point(537, 60);
-            this.LabelCheck.Name = "LabelCheck";
-            this.LabelCheck.Size = new System.Drawing.Size(40, 15);
-            this.LabelCheck.TabIndex = 12;
-            this.LabelCheck.TabStop = true;
-            this.LabelCheck.Text = "Check";
-            this.LabelCheck.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LabelCheck_LinkClicked);
+            LabelCheck.AutoSize = true;
+            LabelCheck.LinkColor = Color.Black;
+            LabelCheck.Location = new Point(537, 60);
+            LabelCheck.Name = "LabelCheck";
+            LabelCheck.Size = new Size(40, 15);
+            LabelCheck.TabIndex = 12;
+            LabelCheck.TabStop = true;
+            LabelCheck.Text = "Check";
+            LabelCheck.LinkClicked += LabelCheck_LinkClicked;
             // 
             // progressBarFtp
             // 
-            this.progressBarFtp.CustomText = "";
-            this.progressBarFtp.Location = new System.Drawing.Point(181, 57);
-            this.progressBarFtp.Maximum = 1000;
-            this.progressBarFtp.Name = "progressBarFtp";
-            this.progressBarFtp.ProgressColor = System.Drawing.Color.LightGreen;
-            this.progressBarFtp.Size = new System.Drawing.Size(350, 23);
-            this.progressBarFtp.Step = 1;
-            this.progressBarFtp.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
-            this.progressBarFtp.TabIndex = 13;
-            this.progressBarFtp.TextColor = System.Drawing.Color.Black;
-            this.progressBarFtp.TextFont = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.progressBarFtp.Visible = false;
+            progressBarFtp.CustomText = "";
+            progressBarFtp.Location = new Point(181, 57);
+            progressBarFtp.Maximum = 1000;
+            progressBarFtp.Name = "progressBarFtp";
+            progressBarFtp.ProgressColor = Color.LightGreen;
+            progressBarFtp.Size = new Size(350, 23);
+            progressBarFtp.Step = 1;
+            progressBarFtp.Style = ProgressBarStyle.Continuous;
+            progressBarFtp.TabIndex = 13;
+            progressBarFtp.TextColor = Color.Black;
+            progressBarFtp.TextFont = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            progressBarFtp.Visible = false;
             // 
             // linkLabelSettings
             // 
-            this.linkLabelSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.linkLabelSettings.AutoEllipsis = true;
-            this.linkLabelSettings.AutoSize = true;
-            this.linkLabelSettings.Enabled = false;
-            this.linkLabelSettings.Location = new System.Drawing.Point(473, 146);
-            this.linkLabelSettings.Margin = new System.Windows.Forms.Padding(0);
-            this.linkLabelSettings.Name = "linkLabelSettings";
-            this.linkLabelSettings.Size = new System.Drawing.Size(90, 15);
-            this.linkLabelSettings.TabIndex = 14;
-            this.linkLabelSettings.TabStop = true;
-            this.linkLabelSettings.Text = "Настройки .bat";
-            this.linkLabelSettings.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelSettings_LinkClicked);
+            linkLabelSettings.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            linkLabelSettings.AutoEllipsis = true;
+            linkLabelSettings.AutoSize = true;
+            linkLabelSettings.Enabled = false;
+            linkLabelSettings.Location = new Point(473, 146);
+            linkLabelSettings.Margin = new Padding(0);
+            linkLabelSettings.Name = "linkLabelSettings";
+            linkLabelSettings.Size = new Size(90, 15);
+            linkLabelSettings.TabIndex = 14;
+            linkLabelSettings.TabStop = true;
+            linkLabelSettings.Text = "Настройки .bat";
+            linkLabelSettings.LinkClicked += linkLabelSettings_LinkClicked;
             // 
             // contextMenuStrip1
             // 
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.resetSettingAplicationToolStripMenuItem});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(197, 26);
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { resetSettingAplicationToolStripMenuItem });
+            contextMenuStrip1.Name = "contextMenuStrip1";
+            contextMenuStrip1.Size = new Size(197, 26);
             // 
             // resetSettingAplicationToolStripMenuItem
             // 
-            this.resetSettingAplicationToolStripMenuItem.Name = "resetSettingAplicationToolStripMenuItem";
-            this.resetSettingAplicationToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
-            this.resetSettingAplicationToolStripMenuItem.Text = "Reset setting aplication";
-            this.resetSettingAplicationToolStripMenuItem.Click += new System.EventHandler(this.resetSettingAplicationToolStripMenuItem_Click);
+            resetSettingAplicationToolStripMenuItem.Name = "resetSettingAplicationToolStripMenuItem";
+            resetSettingAplicationToolStripMenuItem.Size = new Size(196, 22);
+            resetSettingAplicationToolStripMenuItem.Text = "Reset setting aplication";
+            resetSettingAplicationToolStripMenuItem.Click += resetSettingAplicationToolStripMenuItem_Click;
             // 
             // fileInfoDateTime
             // 
-            this.fileInfoDateTime.AutoSize = true;
-            this.fileInfoDateTime.Location = new System.Drawing.Point(20, 143);
-            this.fileInfoDateTime.Name = "fileInfoDateTime";
-            this.fileInfoDateTime.Size = new System.Drawing.Size(95, 30);
-            this.fileInfoDateTime.TabIndex = 15;
-            this.fileInfoDateTime.Text = "Дата изменения\r\nфайлов на FTP:\r\n";
-            this.fileInfoDateTime.Visible = false;
+            fileInfoDateTime.AutoSize = true;
+            fileInfoDateTime.Location = new Point(20, 143);
+            fileInfoDateTime.Name = "fileInfoDateTime";
+            fileInfoDateTime.Size = new Size(95, 30);
+            fileInfoDateTime.TabIndex = 15;
+            fileInfoDateTime.Text = "Дата изменения\r\nфайлов на FTP:\r\n";
+            fileInfoDateTime.Visible = false;
+            // 
+            // buttonUpload
+            // 
+            buttonUpload.Location = new Point(331, 146);
+            buttonUpload.Name = "buttonUpload";
+            buttonUpload.Size = new Size(28, 23);
+            buttonUpload.TabIndex = 16;
+            buttonUpload.Text = "↺";
+            toolTip.SetToolTip(buttonUpload, "Загрузить файлы обратно на FTP.");
+            buttonUpload.UseVisualStyleBackColor = true;
+            buttonUpload.Click += buttonUpload_Click;
+            // 
+            // toolTip
+            // 
+            toolTip.AutoPopDelay = 15000;
+            toolTip.InitialDelay = 500;
+            toolTip.ReshowDelay = 100;
+            // 
+            // cleanFilesCheckBox
+            // 
+            cleanFilesCheckBox.AutoSize = true;
+            cleanFilesCheckBox.Location = new Point(331, 175);
+            cleanFilesCheckBox.Name = "cleanFilesCheckBox";
+            cleanFilesCheckBox.Size = new Size(117, 19);
+            cleanFilesCheckBox.TabIndex = 17;
+            cleanFilesCheckBox.Text = "Очистка файлов";
+            toolTip.SetToolTip(cleanFilesCheckBox, "Очистка файлов и папок перед загрузкой или выгрзукой файлов в целевой папке.");
+            cleanFilesCheckBox.UseVisualStyleBackColor = true;
             // 
             // DedicatedFTPServerValheim
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(585, 197);
-            this.ContextMenuStrip = this.contextMenuStrip1;
-            this.Controls.Add(this.fileInfoDateTime);
-            this.Controls.Add(this.linkLabelSettings);
-            this.Controls.Add(this.LabelCheck);
-            this.Controls.Add(this.ButtonStop);
-            this.Controls.Add(this.ButtonStart);
-            this.Controls.Add(this.buttonPathTemp);
-            this.Controls.Add(this.buttonPathBat);
-            this.Controls.Add(this.pathTemp);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.pathBat);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.progressBarFtp);
-            this.Controls.Add(this.pathFTP);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "DedicatedFTPServerValheim";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-            this.Text = "DedicatedFTPServerValheim";
-            this.LocationChanged += new System.EventHandler(this.DedicatedFTPServerValheim_LocationChanged);
-            this.contextMenuStrip1.ResumeLayout(false);
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(585, 197);
+            ContextMenuStrip = contextMenuStrip1;
+            Controls.Add(cleanFilesCheckBox);
+            Controls.Add(buttonUpload);
+            Controls.Add(fileInfoDateTime);
+            Controls.Add(linkLabelSettings);
+            Controls.Add(LabelCheck);
+            Controls.Add(ButtonStop);
+            Controls.Add(ButtonStart);
+            Controls.Add(buttonPathTemp);
+            Controls.Add(buttonPathBat);
+            Controls.Add(pathTemp);
+            Controls.Add(label3);
+            Controls.Add(label2);
+            Controls.Add(pathBat);
+            Controls.Add(label1);
+            Controls.Add(progressBarFtp);
+            Controls.Add(pathFTP);
+            FormBorderStyle = FormBorderStyle.Fixed3D;
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            Location = new Point(20, 20);
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "DedicatedFTPServerValheim";
+            StartPosition = FormStartPosition.Manual;
+            Text = "DedicatedFTPServerValheim";
+            LocationChanged += DedicatedFTPServerValheim_LocationChanged;
+            contextMenuStrip1.ResumeLayout(false);
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -262,5 +296,8 @@ namespace DedicatedFTPServerValheim
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem resetSettingAplicationToolStripMenuItem;
         private Label fileInfoDateTime;
+        private Button buttonUpload;
+        private ToolTip toolTip;
+        private CheckBox cleanFilesCheckBox;
     }
 }

@@ -15,6 +15,7 @@ namespace DedicatedFTPServerValheim
 
         Process HandleBatCmd { get; set; }
 
+        CancellationTokenSource tokenSource;
 
         FtpConnect Ftp;
 
@@ -32,8 +33,14 @@ namespace DedicatedFTPServerValheim
                 progressBarFtp.Refresh();
             });
 
-            if (!Properties.Settings.Default.DisplayPostion.IsEmpty)
-                this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
+            foreach (var screen in Screen.AllScreens)
+            {
+                if (!Properties.Settings.Default.DisplayPostion.IsEmpty && screen.Bounds.Contains(Properties.Settings.Default.DisplayPostion))
+                {
+                    this.DesktopLocation = Properties.Settings.Default.DisplayPostion;
+                    break;
+                }
+            }
         }
 
         private void buttonPathBat_Click(object sender, EventArgs e)
@@ -72,6 +79,10 @@ namespace DedicatedFTPServerValheim
             Properties.Settings.Default.Save();
             StateUnactive();
 
+            tokenSource = new CancellationTokenSource();
+            var ctFileDownload = tokenSource.Token;
+            ctFileDownload.Register(() => { fileInfoDateTime.Text = "\r\n\r\nОтмена..."; fileInfoDateTime.Visible = true; });
+
             var invChars = Path.GetInvalidPathChars();
 
             if (!File.Exists(pathBat.Text) || pathBat.Text.IndexOfAny(invChars) > 0)
@@ -103,7 +114,21 @@ namespace DedicatedFTPServerValheim
             Ftp.SaveOwerrideShowWindow += dialog => this.Invoke(() => TaskDialog.ShowDialog(this, dialog));
             try
             {
-                await Ftp.LoadFiles(pathTemp.Text, progressFileLoading);
+                if (cleanFilesCheckBox.Checked)
+                {
+                    DialogResult dresult = MessageBox.Show("Удалить все файлы в временной папке?", null, MessageBoxButtons.OKCancel);
+                    if (dresult == DialogResult.OK)
+                        await Ftp.DeleteLocalFiles(pathTemp.Text, progressFileLoading, ctFileDownload);
+                    else if (dresult == DialogResult.Cancel)
+                        tokenSource.Cancel();
+                }
+                await Ftp.LoadFiles(pathTemp.Text, progressFileLoading, ctFileDownload);
+            }
+            catch (OperationCanceledException)
+            {
+                Ftp = null;
+                StateActive();
+                return;
             }
             catch (WebException wEx)
             {
@@ -111,21 +136,32 @@ namespace DedicatedFTPServerValheim
                 {
                     MessageBox.Show("Неверный логин или пароль!");
                     StateActive();
+                    Ftp = null;
                     return;
                 }
                 else
                 {
                     MessageBox.Show("Ошибка подключения к ftp..." + wEx.Message);
                     StateActive();
+                    Ftp = null;
                     return;
                 }
             }
+            finally
+            {
+                tokenSource.Dispose();
+                tokenSource = null;
+                fileInfoDateTime.Visible = false;
+            }
+
             await Task.Delay(1000);
             StateFileDownloadComlite();
+
             if (!File.Exists(Path.Combine(pathTemp.Text, "worlds_local", Bat.SettingBatModel?.World + ".db")))
                 if (MessageBox.Show($"Мир не найден во временной папке. Проверьте имя мира. Или создать новый с именем \"{Bat.SettingBatModel?.World}\"?", null, MessageBoxButtons.YesNo) == DialogResult.No)
                 {
                     StateActive();
+                    Ftp = null;
                     return;
                 }
 
@@ -141,31 +177,39 @@ namespace DedicatedFTPServerValheim
 
         private void StateUnactive()
         {
-            pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = false;
+            pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = buttonUpload.Enabled = false;
         }
         private void StateActive()
         {
-            pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = true;
+            pathTemp.Enabled = pathFTP.Enabled = pathBat.Enabled = buttonPathBat.Enabled = buttonPathTemp.Enabled = ButtonStart.Enabled = buttonUpload.Enabled = true;
             fileInfoDateTime.Visible = false;
+            fileInfoDateTime.Text = "Дата изменения\r\nфайлов на FTP:\r\n";
             StateFileDownloadComlite();
         }
         private void StateFileDownload()
         {
             progressBarFtp.Visible = true;
             progressBarFtp.Value = 0;
-            //fileInfoLoading.Text = ""; fileInfoLoading.Visible = true;
             this.Cursor = Cursors.WaitCursor;
+            ButtonStop.Cursor = Cursors.Default;
+            cleanFilesCheckBox.Cursor = Cursors.Default;
         }
         private void StateFileDownloadComlite()
         {
             progressBarFtp.Visible = false;
             progressBarFtp.Value = 0; progressBarFtp.CustomText = "";
-            //fileInfoLoading.Text = ""; fileInfoLoading.Visible = false;
             this.Cursor = Cursors.Default;
         }
 
         private async void ButtonStop_Click(object sender, EventArgs e)
         {
+            if (tokenSource != null && !tokenSource.IsCancellationRequested)
+            {
+                tokenSource.Cancel();
+                Ftp = null;
+                return;
+            }
+
             if (Ftp is null) { return; }
             StateFileDownload();
             if (HandleBatCmd != null && !HandleBatCmd.HasExited && MessageBox.Show("Сервер не завершил работу.\nРекомендуется завершить работу через CTRL + C.\nЗвавершить принудительно?", "Внимание", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
@@ -175,11 +219,33 @@ namespace DedicatedFTPServerValheim
             HandleBatCmd?.Dispose();
             if (File.Exists(Bat?.TempBatPath))
                 File.Delete(Bat.TempBatPath);
-            if (Ftp?.ListFiles == null)
-                MessageBox.Show("Загузка не произведена, файлов нет в памяти!");
+            if (Ftp != null)
+                if (MessageBox.Show("Загрузить файлы на сервер?", null, MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    try
+                    {
+                        tokenSource = new CancellationTokenSource();
+                        tokenSource.Token.Register(() => { fileInfoDateTime.Text = "\r\n\r\nОтмена..."; fileInfoDateTime.Visible = true; });
+                        if (cleanFilesCheckBox.Checked)
+                        {
+                            DialogResult dresult = MessageBox.Show("Удалить все файлы в папке на сервере FTP?", null, MessageBoxButtons.OKCancel);
+                            if (dresult == DialogResult.OK)
+                                await Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token);
+                            else if (dresult == DialogResult.Cancel)
+                                tokenSource.Cancel();
+                        }
+                        await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token);
+                    }
+                    catch (OperationCanceledException) { }
+                    finally
+                    {
+                        tokenSource.Dispose();
+                        tokenSource = null;
+                    }
+                }
+                else
+                    MessageBox.Show("Загузка не произведена, нет ссылки на объект ftp! Воспользуйтесь кнопкой выгрузки файлов на FTP.");
 
-            if (MessageBox.Show("Перезаписать файлы на сервере?", null, MessageBoxButtons.YesNo) == DialogResult.Yes)
-                await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading);
             Ftp = null;
             StateActive();
         }
@@ -196,19 +262,30 @@ namespace DedicatedFTPServerValheim
             MessageBox.Show(ftp.TryConnect());
         }
 
+        private void DedicatedFTPServerValheim_LocationChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.DisplayPostion = this.DesktopLocation;
+        }
 
         private void pathFTP_TextChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.PathFTP = pathFTP.Text;
         }
 
-        private void DedicatedFTPServerValheim_LocationChanged(object sender, EventArgs e)
+        private void pathTemp_TextChanged(object sender, EventArgs e)
         {
-            Properties.Settings.Default.DisplayPostion = this.DesktopLocation;
+            Properties.Settings.Default.PathTemp = pathTemp.Text;
+            if (Bat is not null)
+                Bat.savedirParameter = pathTemp.Text;
+            if (!Directory.Exists(pathTemp.Text) || pathTemp.Text.IndexOfAny(Path.GetInvalidPathChars()) > 0)
+                buttonUpload.Enabled = false;
+            else
+                buttonUpload.Enabled = true;
         }
 
         private void pathBat_TextChanged(object sender, EventArgs e)
         {
+            Properties.Settings.Default.PathBat = pathBat.Text;
             if (File.Exists(pathBat.Text) && Path.GetExtension(pathBat.Text) == ".bat")
             {
                 Bat = new BatModel("StartDedicatedServerFromFtp.bat") { savedirParameter = pathTemp.Text };
@@ -258,11 +335,72 @@ namespace DedicatedFTPServerValheim
             System.Windows.Forms.Application.Restart();
         }
 
-        private void pathTemp_TextChanged(object sender, EventArgs e)
-        {
-            if (Bat is not null)
-                Bat.savedirParameter = pathTemp.Text;
-        }
 
+        private async void buttonUpload_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Save();
+            StateUnactive();
+            var invChars = Path.GetInvalidPathChars();
+            if (!Directory.Exists(pathTemp.Text) || pathTemp.Text.IndexOfAny(invChars) > 0)
+            {
+                MessageBox.Show("Неверный путь! PathTemp"); StateActive(); return;
+            }
+            else if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.Absolute) || pathFTP.Text.IndexOfAny(invChars) > 0)
+            {
+                MessageBox.Show("Неверный путь! PathFTP"); StateActive(); return;
+            }
+            else if (!pathFTP.Text.EndsWith('/'))
+            {
+                pathFTP.Text += '/';
+            }
+
+            Ftp = new FtpConnect(pathFTP.Text);
+            Ftp.DateTimeChanged += (data) => { fileInfoDateTime.Text = $"Дата изменения\r\nфайлов на FTP:\r\n{data}"; fileInfoDateTime.Visible = true; };
+            StateFileDownload();
+            if (MessageBox.Show("Загрузить файлы на сервер FTP?", null, MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                try
+                {
+                    tokenSource = new CancellationTokenSource();
+                    tokenSource.Token.Register(() => { { fileInfoDateTime.Text = "\r\n\r\nОтмена..."; fileInfoDateTime.Visible = true; } });
+
+                    if (cleanFilesCheckBox.Checked)
+                    {
+                        DialogResult dresult = MessageBox.Show("Удалить все файлы в папке на сервере на FTP?", null, MessageBoxButtons.OKCancel);
+                        if (dresult == DialogResult.OK)
+                            await Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token);
+                        else if (dresult == DialogResult.Cancel)
+                            tokenSource.Cancel();
+                    }
+
+                    await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token);
+                }
+                catch (OperationCanceledException) { }
+                catch (WebException wEx)
+                {
+                    if ((wEx.Response as FtpWebResponse).StatusCode == FtpStatusCode.NotLoggedIn)
+                    {
+                        MessageBox.Show("Неверный логин или пароль!");
+                        StateActive();
+                        Ftp = null;
+                        return;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Ошибка подключения к FTP..." + wEx.Message);
+                        StateActive();
+                        Ftp = null;
+                        return;
+                    }
+                }
+                finally
+                {
+                    tokenSource.Dispose();
+                    tokenSource = null;
+                }
+            }
+            StateActive();
+            Ftp = null;
+        }
     }
 }
