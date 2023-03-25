@@ -47,6 +47,7 @@ namespace DedicatedFTPServerValheim
             linkLabelSettings = new LinkLabel();
             contextMenuStrip1 = new ContextMenuStrip(components);
             resetSettingAplicationToolStripMenuItem = new ToolStripMenuItem();
+            resetJsonServerListToolStripMenuItem = new ToolStripMenuItem();
             fileInfoDateTime = new Label();
             buttonUpload = new Button();
             toolTip = new ToolTip(components);
@@ -193,9 +194,9 @@ namespace DedicatedFTPServerValheim
             // 
             // contextMenuStrip1
             // 
-            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { resetSettingAplicationToolStripMenuItem });
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { resetSettingAplicationToolStripMenuItem, resetJsonServerListToolStripMenuItem });
             contextMenuStrip1.Name = "contextMenuStrip1";
-            contextMenuStrip1.Size = new Size(197, 26);
+            contextMenuStrip1.Size = new Size(197, 48);
             // 
             // resetSettingAplicationToolStripMenuItem
             // 
@@ -203,6 +204,13 @@ namespace DedicatedFTPServerValheim
             resetSettingAplicationToolStripMenuItem.Size = new Size(196, 22);
             resetSettingAplicationToolStripMenuItem.Text = "Reset setting aplication";
             resetSettingAplicationToolStripMenuItem.Click += resetSettingAplicationToolStripMenuItem_Click;
+            // 
+            // resetJsonServerListToolStripMenuItem
+            // 
+            resetJsonServerListToolStripMenuItem.Name = "resetJsonServerListToolStripMenuItem";
+            resetJsonServerListToolStripMenuItem.Size = new Size(196, 22);
+            resetJsonServerListToolStripMenuItem.Text = "Reset json server list";
+            resetJsonServerListToolStripMenuItem.Click += resetJsonServerListToolStripMenuItem_Click;
             // 
             // fileInfoDateTime
             // 
@@ -272,6 +280,7 @@ namespace DedicatedFTPServerValheim
             Name = "DedicatedFTPServerValheim";
             StartPosition = FormStartPosition.Manual;
             Text = "DedicatedFTPServerValheim";
+            FormClosing += DedicatedFTPServerValheim_FormClosing;
             LocationChanged += DedicatedFTPServerValheim_LocationChanged;
             contextMenuStrip1.ResumeLayout(false);
             ResumeLayout(false);
@@ -299,5 +308,6 @@ namespace DedicatedFTPServerValheim
         private Button buttonUpload;
         private ToolTip toolTip;
         private CheckBox cleanFilesCheckBox;
+        private ToolStripMenuItem resetJsonServerListToolStripMenuItem;
     }
 }

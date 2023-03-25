@@ -64,9 +64,28 @@ namespace DedicatedFTPServerValheim
                 using (FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse)
                 {
                     if (!response.WelcomeMessage.Contains("230") && response.StatusCode != FtpStatusCode.FileStatus)
-                        throw new Exception("Нвеверный код ответа при запросе даты");
+                        throw new Exception("Неверный код ответа при запросе даты");
 
                     return response.LastModified.ToUniversalTime();
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        private long GetFileSize(string url)
+        {
+            FtpWebRequest ftpWeb = FtpWebRequest.Create(url) as FtpWebRequest;
+            ftpWeb.Method = WebRequestMethods.Ftp.GetFileSize;
+            try
+            {
+                using (FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse)
+                {
+                    if (!response.WelcomeMessage.Contains("230") && response.StatusCode != FtpStatusCode.FileStatus)
+                        throw new Exception("Неверный код ответа при запросе даты");
+
+                    return response.ContentLength;
                 }
             }
             catch (Exception)
@@ -93,7 +112,7 @@ namespace DedicatedFTPServerValheim
                         }
                         else if (objectDet.StartsWith("-r"))
                         {
-                            dir.Files.Add(new FileModel(Path.GetFileName(objectUrl), objectUrl.ToString(), GetDate(objectUrl)));
+                            dir.Files.Add(new FileModel(Path.GetFileName(objectUrl), objectUrl.ToString(), GetDate(objectUrl), GetFileSize(objectUrl)));
                             break;
                         }
                     }
@@ -116,7 +135,7 @@ namespace DedicatedFTPServerValheim
             {
                 progress.Report(((prog + countFiles) / filesAll.Count, fileName, prog));
             });
-
+            filesAll = filesAll.Where(x => x.FileName != "StatusServer.json").ToList();
             foreach (var file in filesAll)
             {
                 if (ct.IsCancellationRequested)
@@ -168,7 +187,8 @@ namespace DedicatedFTPServerValheim
                     return;
                 }
                 TaskDialogButtonCollection buttons = new TaskDialogButtonCollection() { new TaskDialogButton("Да"), new TaskDialogButton("Да для всех!"), new TaskDialogButton("Нет"), new TaskDialogButton("Нет для всех!"), new TaskDialogButton("Отмена") };
-                TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {file.FileName} {File.GetLastWriteTime(tempPath).ToString("G")} существует! Перезаписать на файл с изменениями {file.DateTimeChangedFile}?", Buttons = buttons };
+                FileInfo localFile = new FileInfo(tempPath);
+                TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {file.FileName} уже существует в локальной папке! Перезаписать?\n1. Дата изменения: {localFile.LastWriteTime.ToString("G")} ({localFile.Length} byte).\n2. Дата изменения: {file.DateTimeChangedFile} ({file.Length} byte).", Buttons = buttons };
                 var result = SaveOwerrideShowWindow.Invoke(dialog);
                 if (result == buttons[2])
                 {

@@ -42,14 +42,16 @@ namespace DedicatedFTPServerValheim
     }
     public struct FileModel
     {
-        public string FileName; 
+        public string FileName;
         public string FilePath;
         public DateTime DateTimeChangedFile;
-        public FileModel(string fileName, string filePath, DateTime dateOfChanged)
+        public long Length;
+        public FileModel(string fileName, string filePath, DateTime dateOfChanged, long lenght)
         {
-            FileName= fileName;
-            FilePath= filePath;
-            DateTimeChangedFile= dateOfChanged;
+            FileName = fileName;
+            FilePath = filePath;
+            DateTimeChangedFile = dateOfChanged;
+            Length = lenght;
         }
     }
 }
