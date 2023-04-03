@@ -128,6 +128,7 @@ namespace DedicatedFTPServerValheim
                 ct.ThrowIfCancellationRequested();
             dirModel = LoadDirectoryModel(_url.OriginalString);
             List<FileModel> filesAll = DirectoryModel.GetFilesInDirectoryRecursive(dirModel);
+            filesAll = filesAll.Where(x => x.FileName != "StatusServer.json").ToList();
             DateTimeChanged.Invoke(filesAll.Select(x => x.DateTimeChangedFile).Max());
             int countFiles = 0;
             string fileName = "";
@@ -135,7 +136,6 @@ namespace DedicatedFTPServerValheim
             {
                 progress.Report(((prog + countFiles) / filesAll.Count, fileName, prog));
             });
-            filesAll = filesAll.Where(x => x.FileName != "StatusServer.json").ToList();
             foreach (var file in filesAll)
             {
                 if (ct.IsCancellationRequested)

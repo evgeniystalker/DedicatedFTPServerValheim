@@ -13,7 +13,7 @@ namespace DedicatedFTPServerValheim
         public string NameServer { get; set; }
         public string NameUser { get; set; }
 
-        private string PathFtp;
+        public static string PathFtp;
 
         public ServerStatus(DateTime dataStartServer, string world, StatusCodeServer statusCode, string ip, string nameServer, string nameUser, string pathFTP)
         {
@@ -38,7 +38,7 @@ namespace DedicatedFTPServerValheim
                 else
                     statusList.Add(statusThis);
 
-                await UploadJsonListSync(statusList);
+                await UploadJsonListAsync(statusList);
             }
             catch (Exception)
             {
@@ -68,7 +68,7 @@ namespace DedicatedFTPServerValheim
 
             return string.Empty;
         }
-        public async Task<List<ServerStatus>> GetListServersAsync()
+        public static async Task<List<ServerStatus>> GetListServersAsync()
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create($"{PathFtp}/StatusServer.json") as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.DownloadFile;
@@ -91,7 +91,7 @@ namespace DedicatedFTPServerValheim
                     throw ex;
             }
         }
-        private async Task UploadJsonListSync(List<ServerStatus> list)
+        public static async Task UploadJsonListAsync(List<ServerStatus> list)
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create(PathFtp + "/StatusServer.json") as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.UploadFile;
@@ -117,9 +117,9 @@ namespace DedicatedFTPServerValheim
                 throw ex;
             }
         }
-        public async static Task DeleteJson(string pathFTP)
+        public static async Task DeleteJson()
         {
-            FtpWebRequest ftpWeb = FtpWebRequest.Create($"{pathFTP}/StatusServer.json") as FtpWebRequest;
+            FtpWebRequest ftpWeb = FtpWebRequest.Create($"{PathFtp}/StatusServer.json") as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.DeleteFile;
             FtpWebResponse response = (FtpWebResponse)await ftpWeb.GetResponseAsync();
             if (!response.StatusDescription.Contains("250") && response.StatusCode != FtpStatusCode.FileActionOK)

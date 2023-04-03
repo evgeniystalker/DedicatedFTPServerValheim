@@ -52,6 +52,7 @@ namespace DedicatedFTPServerValheim
             buttonUpload = new Button();
             toolTip = new ToolTip(components);
             cleanFilesCheckBox = new CheckBox();
+            linkLabelJournal = new LinkLabel();
             contextMenuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -250,12 +251,24 @@ namespace DedicatedFTPServerValheim
             toolTip.SetToolTip(cleanFilesCheckBox, "Очистка файлов и папок перед загрузкой или выгрзукой файлов в целевой папке.");
             cleanFilesCheckBox.UseVisualStyleBackColor = true;
             // 
+            // linkLabelJournal
+            // 
+            linkLabelJournal.AutoSize = true;
+            linkLabelJournal.Location = new Point(490, 173);
+            linkLabelJournal.Name = "linkLabelJournal";
+            linkLabelJournal.Size = new Size(73, 15);
+            linkLabelJournal.TabIndex = 18;
+            linkLabelJournal.TabStop = true;
+            linkLabelJournal.Text = "Журнал игр";
+            linkLabelJournal.LinkClicked += linkLabelJournal_LinkClicked;
+            // 
             // DedicatedFTPServerValheim
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(585, 197);
             ContextMenuStrip = contextMenuStrip1;
+            Controls.Add(linkLabelJournal);
             Controls.Add(cleanFilesCheckBox);
             Controls.Add(buttonUpload);
             Controls.Add(fileInfoDateTime);
@@ -309,5 +322,6 @@ namespace DedicatedFTPServerValheim
         private ToolTip toolTip;
         private CheckBox cleanFilesCheckBox;
         private ToolStripMenuItem resetJsonServerListToolStripMenuItem;
+        private LinkLabel linkLabelJournal;
     }
 }

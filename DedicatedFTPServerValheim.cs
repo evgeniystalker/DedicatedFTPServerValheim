@@ -20,6 +20,7 @@ namespace DedicatedFTPServerValheim
         FtpConnect Ftp;
         ServerStatus status;
         Task statusTask;
+        Task loadingUploadingTask;
 
         public DedicatedFTPServerValheim()
         {
@@ -116,14 +117,14 @@ namespace DedicatedFTPServerValheim
                 {
                     DialogResult dresult = MessageBox.Show(this, "Удалить все файлы в временной папке?", "Внимание!", MessageBoxButtons.OKCancel);
                     if (dresult == DialogResult.OK)
-                        await Ftp.DeleteLocalFiles(pathTemp.Text, progressFileLoading, ctFileDownload);
+                        await (loadingUploadingTask = Ftp.DeleteLocalFiles(pathTemp.Text, progressFileLoading, ctFileDownload));
                     else if (dresult == DialogResult.Cancel)
                     { StateStopServer(sendStatus: false); return; }
                 }
 
                 statusTask = status.CheckInAsync();
 
-                await Ftp.LoadFiles(pathTemp.Text, progressFileLoading, ctFileDownload);
+                await (loadingUploadingTask = Ftp.LoadFiles(pathTemp.Text, progressFileLoading, ctFileDownload));
             }
             catch (OperationCanceledException)
             {
@@ -209,8 +210,11 @@ namespace DedicatedFTPServerValheim
         {
             if (tokenSource != null && !tokenSource.IsCancellationRequested)
             {
-                status.StatusCode = ServerStatus.StatusCodeServer.Stop;
-                statusTask = status.CheckInAsync();
+                if (status.StatusCode != ServerStatus.StatusCodeServer.Stop)
+                {
+                    status.StatusCode = ServerStatus.StatusCodeServer.Stop;
+                    statusTask = status.CheckInAsync();
+                }
                 tokenSource.Cancel();
                 Ftp = null;
                 return;
@@ -223,6 +227,7 @@ namespace DedicatedFTPServerValheim
 
             HandleBatCmd?.WaitForExit();
             HandleBatCmd?.Dispose();
+            HandleBatCmd = null;
             if (File.Exists(Bat?.TempBatPath))
                 File.Delete(Bat.TempBatPath);
             if (Ftp != null)
@@ -236,11 +241,11 @@ namespace DedicatedFTPServerValheim
                         {
                             DialogResult dresult = MessageBox.Show(this, "Удалить все файлы в папке на сервере FTP?", "Внимание!", MessageBoxButtons.OKCancel);
                             if (dresult == DialogResult.OK)
-                                await Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token);
+                                await (loadingUploadingTask = Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token));
                             else if (dresult == DialogResult.Cancel)
                                 tokenSource.Cancel();
                         }
-                        await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token);
+                        await (loadingUploadingTask = Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token));
                     }
                     catch (OperationCanceledException) { }
                     finally
@@ -360,12 +365,12 @@ namespace DedicatedFTPServerValheim
                     {
                         DialogResult dresult = MessageBox.Show(this, "Удалить все файлы в папке на сервере на FTP?", "Внимание!", MessageBoxButtons.OKCancel);
                         if (dresult == DialogResult.OK)
-                            await Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token);
+                            await (loadingUploadingTask = Ftp.DeleteFilesFTP(progressFileLoading, tokenSource.Token));
                         else if (dresult == DialogResult.Cancel)
                             tokenSource.Cancel();
                     }
 
-                    await Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token);
+                    await (loadingUploadingTask = Ftp.UploadFilesBack(pathTemp.Text, progressFileLoading, tokenSource.Token));
                 }
                 catch (OperationCanceledException) { }
                 catch (WebException wEx)
@@ -397,19 +402,31 @@ namespace DedicatedFTPServerValheim
 
             HandleBatCmd?.WaitForExit(60 * 100);
             HandleBatCmd?.Dispose();
+            HandleBatCmd = null;
+
+            if (tokenSource != null && !tokenSource.IsCancellationRequested && MessageBox.Show(this, "Отменить загрузку?", "Внимание!", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                tokenSource.Cancel();
+            try
+            {
+                await loadingUploadingTask.WaitAsync(new TimeSpan(0, 0, 60));
+                await statusTask.WaitAsync(new TimeSpan(0,0,60));
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception) { System.Media.SystemSounds.Beep.Play(); }
+            Ftp = null;
+
             if (File.Exists(Bat?.TempBatPath))
                 File.Delete(Bat.TempBatPath);
-            if (status.StatusCode == ServerStatus.StatusCodeServer.Run)
+            if (status.StatusCode != ServerStatus.StatusCodeServer.Stop)
                 try
                 {
                     status.StatusCode = ServerStatus.StatusCodeServer.Stop;
-                    await status.CheckInAsync();
+                    await (statusTask = status.CheckInAsync());
                 }
                 catch (Exception)
                 {
                     System.Media.SystemSounds.Beep.Play();
                 }
-            e.Cancel = false;
             this.FormClosing -= DedicatedFTPServerValheim_FormClosing;
             this.Close();
         }
@@ -420,7 +437,8 @@ namespace DedicatedFTPServerValheim
                 return;
             try
             {
-                await ServerStatus.DeleteJson(pathFTP.Text);
+                ServerStatus.PathFtp = pathFTP.Text;
+                await (statusTask = ServerStatus.DeleteJson());
             }
             catch (WebException ex)
             {
@@ -467,5 +485,26 @@ namespace DedicatedFTPServerValheim
             return true;
         }
 
+        private async void linkLabelJournal_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            if (!CheckPathFTP())
+                return;
+            try
+            {
+                ServerStatus.PathFtp = pathFTP.Text;
+                List<ServerStatus> serverStatusList;
+                serverStatusList = await ServerStatus.GetListServersAsync();
+                JournalGames journal = new JournalGames(serverStatusList);
+                if (journal.ShowDialog(this) == DialogResult.OK)
+                {
+                    var list = journal.serverStatusBindingSource.DataSource as List<ServerStatus>;
+                    await (statusTask =  ServerStatus.UploadJsonListAsync(list));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
     }
 }
