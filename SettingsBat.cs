@@ -12,6 +12,7 @@ namespace DedicatedFTPServerValheim
 {
     public partial class SettingsBatForm : Form
     {
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public SettingModel SettingModel { get; set; }
 
         public SettingsBatForm()

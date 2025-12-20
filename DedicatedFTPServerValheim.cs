@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Net;
+using System.ComponentModel;
 
 namespace DedicatedFTPServerValheim
 {
@@ -11,6 +12,7 @@ namespace DedicatedFTPServerValheim
         /// </summary>
         Progress<(float, string, float)> progressFileLoading;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal BatModel Bat { get; set; }
 
         Process HandleBatCmd { get; set; }
@@ -408,8 +410,10 @@ namespace DedicatedFTPServerValheim
                 tokenSource.Cancel();
             try
             {
-                await loadingUploadingTask.WaitAsync(new TimeSpan(0, 0, 60));
-                await statusTask.WaitAsync(new TimeSpan(0,0,60));
+                if (loadingUploadingTask != null)
+                    await loadingUploadingTask.WaitAsync(new TimeSpan(0, 0, 60));
+                if (statusTask != null)
+                    await statusTask.WaitAsync(new TimeSpan(0, 0, 60));
             }
             catch (OperationCanceledException) { }
             catch (Exception) { System.Media.SystemSounds.Beep.Play(); }
@@ -498,7 +502,7 @@ namespace DedicatedFTPServerValheim
                 if (journal.ShowDialog(this) == DialogResult.OK)
                 {
                     var list = journal.serverStatusBindingSource.DataSource as List<ServerStatus>;
-                    await (statusTask =  ServerStatus.UploadJsonListAsync(list));
+                    await (statusTask = ServerStatus.UploadJsonListAsync(list));
                 }
             }
             catch (Exception ex)

@@ -88,7 +88,7 @@ namespace DedicatedFTPServerValheim
                 if (ex.Message.Contains("550"))
                     return new List<ServerStatus>();
                 else
-                    throw ex;
+                    throw;
             }
         }
         public static async Task UploadJsonListAsync(List<ServerStatus> list)
@@ -112,9 +112,9 @@ namespace DedicatedFTPServerValheim
                     throw new WebException("Ошибка при загрузке файла отметки о запуске сервера. " + response.StatusDescription);
                 }
             }
-            catch (WebException ex)
+            catch (WebException)
             {
-                throw ex;
+                throw;
             }
         }
         public static async Task DeleteJson()

@@ -7,6 +7,7 @@ namespace CustomControls
     {
         private string _text = string.Empty;
         [Category("Additional Options"), Browsable(true), EditorBrowsable(EditorBrowsableState.Always)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string CustomText
         {
             get
@@ -22,6 +23,7 @@ namespace CustomControls
         private SolidBrush _progressColourBrush = (SolidBrush)Brushes.LightGreen;
 
         [Category("Additional Options"), Browsable(true), EditorBrowsable(EditorBrowsableState.Always)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color ProgressColor
         {
             get
@@ -35,10 +37,12 @@ namespace CustomControls
             }
         }
         [Description("Font of the text on ProgressBar"), Category("Additional Options")]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Font TextFont { get; set; } = DefaultFont;
 
         private SolidBrush _textColourBrush = (SolidBrush)Brushes.Black;
         [Category("Additional Options")]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color TextColor
         {
             get
