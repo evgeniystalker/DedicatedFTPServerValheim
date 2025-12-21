@@ -98,6 +98,7 @@ namespace DedicatedFTPServerValheim
             pathFTP.Size = new Size(350, 23);
             pathFTP.TabIndex = 6;
             pathFTP.TextChanged += pathFTP_TextChanged;
+            pathFTP.Validated += pathFTP_Validated;
             // 
             // pathTemp
             // 
@@ -109,7 +110,7 @@ namespace DedicatedFTPServerValheim
             // 
             // buttonPathBat
             // 
-            buttonPathBat.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            buttonPathBat.Font = new Font("Segoe UI", 9F);
             buttonPathBat.Location = new Point(537, 17);
             buttonPathBat.Name = "buttonPathBat";
             buttonPathBat.RightToLeft = RightToLeft.No;
@@ -165,17 +166,13 @@ namespace DedicatedFTPServerValheim
             // 
             // progressBarFtp
             // 
-            progressBarFtp.CustomText = "";
             progressBarFtp.Location = new Point(181, 57);
             progressBarFtp.Maximum = 1000;
             progressBarFtp.Name = "progressBarFtp";
-            progressBarFtp.ProgressColor = Color.LightGreen;
             progressBarFtp.Size = new Size(350, 23);
             progressBarFtp.Step = 1;
             progressBarFtp.Style = ProgressBarStyle.Continuous;
             progressBarFtp.TabIndex = 13;
-            progressBarFtp.TextColor = Color.Black;
-            progressBarFtp.TextFont = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             progressBarFtp.Visible = false;
             // 
             // linkLabelSettings

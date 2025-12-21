@@ -7,7 +7,17 @@ namespace DedicatedFTPServerValheim
 {
     internal class FtpConnect
     {
-        private Uri _url { get; set; }
+        private Uri url;
+        private Uri _url
+        {
+            get => url;
+            set
+            {
+                if (!value.Scheme.Equals(Uri.UriSchemeFtp, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"Схема ({value.Scheme}) не соответствует ftp://");
+                url = value;
+            }
+        }
 
         private DirectoryModel _listFiles;
         public DirectoryModel dirModel
@@ -32,12 +42,10 @@ namespace DedicatedFTPServerValheim
         public delegate void DateTimeHandler(DateTime lastDateChanging);
         public event DateTimeHandler DateTimeChanged;
 
-
         public string TryConnect()
         {
             try
             {
-
                 if (GetResponseList(_url.OriginalString) != null)
                 {
                     return "Проверка успешна!";
@@ -59,6 +67,7 @@ namespace DedicatedFTPServerValheim
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create(url) as FtpWebRequest;
             ftpWeb.Method = WebRequestMethods.Ftp.GetDateTimestamp;
+
             try
             {
                 using (FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse)
@@ -66,7 +75,7 @@ namespace DedicatedFTPServerValheim
                     if (!response.WelcomeMessage.Contains("230") && response.StatusCode != FtpStatusCode.FileStatus)
                         throw new Exception("Неверный код ответа при запросе даты");
 
-                    return response.LastModified.ToUniversalTime();
+                    return DateTime.SpecifyKind(response.LastModified.ToUniversalTime(), DateTimeKind.Local).ToUniversalTime();//на моём ftp почему то время смещается два раза...
                 }
             }
             catch (Exception)
@@ -154,22 +163,25 @@ namespace DedicatedFTPServerValheim
         {
             if (WebRequestMethods.Ftp.ListDirectory != listDirectoryOrDetails && WebRequestMethods.Ftp.ListDirectoryDetails != listDirectoryOrDetails)
                 throw new Exception("Неверный метод Ftp. Передайте только ListDirectory или ListDerectoryDetails");
-            FtpWebRequest ftpWeb = FtpWebRequest.Create(url) as FtpWebRequest;
-            ftpWeb.Method = listDirectoryOrDetails;
-            List<string> listDirectory = null;
-            using (FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse)
+            if (FtpWebRequest.Create(url) is FtpWebRequest ftpWeb)
             {
-                if (response.WelcomeMessage.Contains("230") && response.StatusCode == FtpStatusCode.OpeningData)
+                ftpWeb.Method = listDirectoryOrDetails;
+                List<string> listDirectory = null;
+                using (FtpWebResponse response = ftpWeb.GetResponse() as FtpWebResponse)
                 {
-                    using StreamReader sr = new StreamReader(response.GetResponseStream());
-                    string dataFiles = sr.ReadToEnd();
-                    listDirectory = dataFiles.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+                    if (response.WelcomeMessage.Contains("230") && response.StatusCode == FtpStatusCode.OpeningData)
+                    {
+                        using StreamReader sr = new StreamReader(response.GetResponseStream());
+                        string dataFiles = sr.ReadToEnd();
+                        listDirectory = dataFiles.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+                    }
                 }
+                return listDirectory;
             }
-            return listDirectory;
+            else throw new Exception("Невозможно создать соедиенение с Ftp. Неверная ссылка.");
         }
 
-        public event Func<TaskDialogPage, TaskDialogButton> SaveOwerrideShowWindow;
+        public event Func<TaskDialogPage, TaskDialogButton> SaveOverrideShowWindow;
         public void GetFileFtp(FileModel file, string pathSave, IProgress<float> progressOneFile)
         {
             Uri fileNameUri = new Uri(file.FilePath);
@@ -188,8 +200,8 @@ namespace DedicatedFTPServerValheim
                 }
                 TaskDialogButtonCollection buttons = new TaskDialogButtonCollection() { new TaskDialogButton("Да"), new TaskDialogButton("Да для всех!"), new TaskDialogButton("Нет"), new TaskDialogButton("Нет для всех!"), new TaskDialogButton("Отмена") };
                 FileInfo localFile = new FileInfo(tempPath);
-                TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {file.FileName} уже существует в локальной папке! Перезаписать?\n1. Дата изменения: {localFile.LastWriteTime.ToString("G")} ({localFile.Length} byte).\n2. Дата изменения: {file.DateTimeChangedFile} ({file.Length} byte).", Buttons = buttons };
-                var result = SaveOwerrideShowWindow.Invoke(dialog);
+                TaskDialogPage dialog = new TaskDialogPage() { Text = $"Файл {file.FileName} уже существует в локальной папке! Перезаписать?\n1. Дата изменения: {localFile.LastWriteTime.ToString("G")} ({localFile.Length} byte).\n2. Дата изменения: {file.DateTimeChangedFile.ToLocalTime()} ({file.Length} byte). ☁", Buttons = buttons };
+                var result = SaveOverrideShowWindow.Invoke(dialog);
                 if (result == buttons[2])
                 {
                     progressOneFile.Report(1);
@@ -226,22 +238,23 @@ namespace DedicatedFTPServerValheim
                 int oldPrecent = 0;
                 int numOfBytesRead = streamResponse.Read(buffer, 0, buffer.Length);
                 long countBytes = numOfBytesRead;
-                
+
                 while (numOfBytesRead != 0)
                 {
                     writer.Write(buffer, 0, numOfBytesRead);
                     numOfBytesRead = streamResponse.Read(buffer, 0, buffer.Length);
                     int precent = (int)((countBytes += numOfBytesRead) * 100 / lenghtBytes);
-                  
+
                     if (precent != oldPrecent)
                     {
                         oldPrecent = precent;
                         progressOneFile.Report(precent / 100f);
                     }
-                    
+
                 }
                 writer.Flush();
                 writer.Close();
+                UpdateLocalFileAttrributeDateTime(tempPath, file.DateTimeChangedFile);
             }
 
             void CreateDirRecur(string path)
@@ -254,6 +267,13 @@ namespace DedicatedFTPServerValheim
                 else
                     return;
             }
+        }
+
+        private void UpdateLocalFileAttrributeDateTime(string pathFile, DateTime attrDateTime)
+        {
+            FileInfo fileInfo = new FileInfo(pathFile);
+                fileInfo.LastWriteTimeUtc = attrDateTime;
+                fileInfo.LastAccessTimeUtc = attrDateTime;
         }
 
         public async Task UploadFilesBack(string pathTempDirectory, IProgress<(float, string, float)> progress, CancellationToken token)

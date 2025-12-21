@@ -30,6 +30,7 @@ namespace DedicatedFTPServerValheim
             pathBat.Text = Properties.Settings.Default.PathBat;
             pathTemp.Text = Properties.Settings.Default.PathTemp;
             pathFTP.Text = Properties.Settings.Default.PathFTP;
+            pathFTP_Validated(pathFTP, EventArgs.Empty);
 
             progressFileLoading = new Progress<(float, string, float)>(prog =>
             {
@@ -107,7 +108,7 @@ namespace DedicatedFTPServerValheim
 
             Ftp = new FtpConnect(pathFTP.Text);
             Ftp.DateTimeChanged += (data) => { fileInfoDateTime.Text = $"Дата изменения\r\nфайлов на FTP:\r\n{data}"; fileInfoDateTime.Visible = true; };
-            Ftp.SaveOwerrideShowWindow += dialog => this.Invoke(() => TaskDialog.ShowDialog(this, dialog));
+            Ftp.SaveOverrideShowWindow += dialog => this.Invoke(() => TaskDialog.ShowDialog(this, dialog));
 
             try
             {
@@ -182,6 +183,14 @@ namespace DedicatedFTPServerValheim
             fileInfoDateTime.Visible = false;
             fileInfoDateTime.Text = "Дата изменения\r\nфайлов на FTP:\r\n";
             StateFileDownloadComlite();
+        }
+        private void StateBlockedUrlFtp()
+        {
+            ButtonStart.Enabled = buttonUpload.Enabled = linkLabelJournal.Enabled = false;
+        }
+        private void StateUnBlockedUrlFtp()
+        {
+            ButtonStart.Enabled = buttonUpload.Enabled = linkLabelJournal.Enabled = true;
         }
         private void StateFileDownload()
         {
@@ -468,7 +477,7 @@ namespace DedicatedFTPServerValheim
         {
             if (!Uri.IsWellFormedUriString(pathFTP.Text, UriKind.Absolute) || pathFTP.Text.IndexOfAny(invChars ?? Path.GetInvalidPathChars()) > 0)
             {
-                MessageBox.Show(this, "Неверный путь! PathFTP");
+                MessageBox.Show(this, "Неверный путь ссылки Ftp!");
                 StateActive();
                 return false;
             }
@@ -509,6 +518,26 @@ namespace DedicatedFTPServerValheim
             {
                 MessageBox.Show(ex.Message);
             }
+        }
+
+        private void pathFTP_Validated(object sender, EventArgs e)
+        {
+            if (pathFTP.Text.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase))
+            {
+                StateUnBlockedUrlFtp();
+                return;
+            }
+            if (pathFTP.Text.Contains("://"))
+            {
+                var shema = pathFTP.Text.Substring(0, pathFTP.Text.IndexOf("://") + 3);
+                StateBlockedUrlFtp();
+                MessageBox.Show($"Неверная схема ссылки на ftp ({shema}). Требуется ftp://");
+                return;
+            }
+
+            pathFTP.Text = "ftp://" + pathFTP.Text;
+            StateUnBlockedUrlFtp();
+            return;
         }
     }
 }
