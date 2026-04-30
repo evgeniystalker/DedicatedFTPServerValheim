@@ -33,11 +33,11 @@ namespace DedicatedFTPServerValheim
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DedicatedFTPServerValheim));
             label1 = new Label();
-            pathBat = new TextBox();
+            startFilePath = new TextBox();
             label2 = new Label();
             label3 = new Label();
-            pathFTP = new TextBox();
-            pathTemp = new TextBox();
+            ftpUrl = new TextBox();
+            tempDirectoryPath = new TextBox();
             buttonPathBat = new Button();
             buttonPathTemp = new Button();
             ButtonStart = new Button();
@@ -67,11 +67,11 @@ namespace DedicatedFTPServerValheim
             // 
             // pathBat
             // 
-            pathBat.Location = new Point(181, 17);
-            pathBat.Name = "pathBat";
-            pathBat.Size = new Size(350, 23);
-            pathBat.TabIndex = 5;
-            pathBat.TextChanged += pathBat_TextChanged;
+            startFilePath.Location = new Point(181, 17);
+            startFilePath.Name = "pathBat";
+            startFilePath.Size = new Size(350, 23);
+            startFilePath.TabIndex = 5;
+            startFilePath.TextChanged += pathBat_TextChanged;
             // 
             // label2
             // 
@@ -93,20 +93,20 @@ namespace DedicatedFTPServerValheim
             // 
             // pathFTP
             // 
-            pathFTP.Location = new Point(181, 57);
-            pathFTP.Name = "pathFTP";
-            pathFTP.Size = new Size(350, 23);
-            pathFTP.TabIndex = 6;
-            pathFTP.TextChanged += pathFTP_TextChanged;
-            pathFTP.Validated += pathFTP_Validated;
+            ftpUrl.Location = new Point(181, 57);
+            ftpUrl.Name = "pathFTP";
+            ftpUrl.Size = new Size(350, 23);
+            ftpUrl.TabIndex = 6;
+            ftpUrl.TextChanged += pathFTP_TextChanged;
+            ftpUrl.Validated += pathFTP_Validated;
             // 
             // pathTemp
             // 
-            pathTemp.Location = new Point(181, 97);
-            pathTemp.Name = "pathTemp";
-            pathTemp.Size = new Size(350, 23);
-            pathTemp.TabIndex = 7;
-            pathTemp.TextChanged += pathTemp_TextChanged;
+            tempDirectoryPath.Location = new Point(181, 97);
+            tempDirectoryPath.Name = "pathTemp";
+            tempDirectoryPath.Size = new Size(350, 23);
+            tempDirectoryPath.TabIndex = 7;
+            tempDirectoryPath.TextChanged += pathTemp_TextChanged;
             // 
             // buttonPathBat
             // 
@@ -118,7 +118,7 @@ namespace DedicatedFTPServerValheim
             buttonPathBat.TabIndex = 2;
             buttonPathBat.Text = "...";
             buttonPathBat.UseVisualStyleBackColor = true;
-            buttonPathBat.Click += buttonPathBat_Click;
+            buttonPathBat.Click += buttonPathStartFile_Click;
             // 
             // buttonPathTemp
             // 
@@ -275,13 +275,13 @@ namespace DedicatedFTPServerValheim
             Controls.Add(ButtonStart);
             Controls.Add(buttonPathTemp);
             Controls.Add(buttonPathBat);
-            Controls.Add(pathTemp);
+            Controls.Add(tempDirectoryPath);
             Controls.Add(label3);
             Controls.Add(label2);
-            Controls.Add(pathBat);
+            Controls.Add(startFilePath);
             Controls.Add(label1);
             Controls.Add(progressBarFtp);
-            Controls.Add(pathFTP);
+            Controls.Add(ftpUrl);
             FormBorderStyle = FormBorderStyle.Fixed3D;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Location = new Point(20, 20);
@@ -300,11 +300,11 @@ namespace DedicatedFTPServerValheim
         #endregion
 
         private Label label1;
-        private TextBox pathBat;
+        private TextBox startFilePath;
         private Label label2;
         private Label label3;
-        private TextBox pathFTP;
-        private TextBox pathTemp;
+        private TextBox ftpUrl;
+        private TextBox tempDirectoryPath;
         private Button buttonPathBat;
         private Button buttonPathTemp;
         private Button ButtonStart;
