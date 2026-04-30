@@ -1,5 +1,9 @@
 ﻿namespace DedicatedFTPServerValheim
 {
+    /// <summary>
+    /// Модель параметров запуска Valheim dedicated server,
+    /// соответствующих ключам командной строки в .bat.
+    /// </summary>
     public struct SettingModel
     {
         public bool Nographics { get; set; }
@@ -17,6 +21,9 @@
         private static string[] stringParams = new string[] { "-name", "-world", "-password", "-savedir" };
 
         private static string[] boolParams = new string[] { "-nographics", "-batchmode", "-crossplay" };
+        /// <summary>
+        /// Значения по умолчанию для быстрого старта.
+        /// </summary>
         public SettingModel()
         {
             Nographics = true;
@@ -28,6 +35,9 @@
             Crossplay = true;
             Savedir = null;
         }
+        /// <summary>
+        /// Инициализация параметров запуска из UI/парсинга bat-файла.
+        /// </summary>
         public SettingModel(string name, int port, string world, string password, bool nographics = true, bool batchmode = true, bool crossplay = true, string savedir = null)
         {
             Nographics = nographics;
@@ -39,10 +49,16 @@
             Crossplay = crossplay;
             Savedir = savedir;
         }
+        /// <summary>
+        /// Возвращает полный список поддерживаемых ключей параметров.
+        /// </summary>
         public static string[] GetNameAllParams()
         {
             return boolParams.Concat(stringParams).Concat(intParams).ToArray();
         }
+        /// <summary>
+        /// Возвращает ключи параметров по типу (bool/string/int).
+        /// </summary>
         public static string[] GetNamesParams<T>()
         {
             if (typeof(bool) == typeof(T))
@@ -54,6 +70,9 @@
             else throw new Exception("Invalid type params");
         }
 
+        /// <summary>
+        /// Получает значение параметра по имени ключа (например, "-world").
+        /// </summary>
         public T GetParamValue<T>(string name)
         {
             if (name.Contains('-'))
@@ -62,6 +81,9 @@
             name = char.ToUpper(name[0]) + name.Substring(1);
             return (T)typeof(SettingModel).GetProperty(name).GetValue(this);
         }
+        /// <summary>
+        /// Формирует строку параметров командной строки.
+        /// </summary>
         public override string ToString()
         {
             List<string> comandLine = new List<string>();

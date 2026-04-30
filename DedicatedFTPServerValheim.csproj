@@ -14,6 +14,9 @@
 
   <ItemGroup>
     <None Remove="valheim_server.exe" />
+    <Compile Remove="DedicatedFTPServerValheim.Tests\**\*.cs" />
+    <EmbeddedResource Remove="DedicatedFTPServerValheim.Tests\**\*" />
+    <None Remove="DedicatedFTPServerValheim.Tests\**\*" />
   </ItemGroup>
 
   <ItemGroup>

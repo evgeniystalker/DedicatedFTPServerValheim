@@ -5,6 +5,10 @@ using System.Net;
 
 namespace DedicatedFTPServerValheim
 {
+    /// <summary>
+    /// Legacy FTP-клиент приложения.
+    /// Реализует рекурсивное чтение структуры FTP, загрузку/выгрузку и удаление файлов/папок.
+    /// </summary>
     internal class FtpConnect
     {
         private Uri url;
@@ -31,10 +35,16 @@ namespace DedicatedFTPServerValheim
             private set { _listFiles = value; }
         }
 
+        /// <summary>
+        /// Инициализация клиента из Uri.
+        /// </summary>
         public FtpConnect(Uri url)
         {
             _url = url;
         }
+        /// <summary>
+        /// Инициализация клиента из строки URL.
+        /// </summary>
         public FtpConnect(string url)
         {
             _url = new Uri(url);
@@ -42,6 +52,9 @@ namespace DedicatedFTPServerValheim
         public delegate void DateTimeHandler(DateTime lastDateChanging);
         public event DateTimeHandler DateTimeChanged;
 
+        /// <summary>
+        /// Пытается подключиться к FTP и возвращает пользовательское сообщение о результате.
+        /// </summary>
         public string TryConnect()
         {
             try
@@ -55,7 +68,7 @@ namespace DedicatedFTPServerValheim
             }
             catch (WebException wEx)
             {
-                if ((wEx.Response as FtpWebResponse).StatusCode == FtpStatusCode.NotLoggedIn)
+                if (wEx.Response is FtpWebResponse ftpEx && ftpEx.StatusCode == FtpStatusCode.NotLoggedIn)
                 {
                     return "Неверный логин или пароль!";
                 }
@@ -131,6 +144,9 @@ namespace DedicatedFTPServerValheim
             return dir;
         }
 
+        /// <summary>
+        /// Скачивает все файлы с FTP в локальную папку с прогрессом и поддержкой отмены.
+        /// </summary>
         public async Task LoadFiles(string pathSave, IProgress<(float, string, float)> progress, CancellationToken ct)
         {
             if (ct.IsCancellationRequested)
@@ -182,6 +198,9 @@ namespace DedicatedFTPServerValheim
         }
 
         public event Func<TaskDialogPage, TaskDialogButton> SaveOverrideShowWindow;
+        /// <summary>
+        /// Скачивает один файл с FTP в локальную папку.
+        /// </summary>
         public void GetFileFtp(FileModel file, string pathSave, IProgress<float> progressOneFile)
         {
             Uri fileNameUri = new Uri(file.FilePath);
@@ -276,6 +295,9 @@ namespace DedicatedFTPServerValheim
                 fileInfo.LastAccessTimeUtc = attrDateTime;
         }
 
+        /// <summary>
+        /// Загружает локальные файлы обратно на FTP с прогрессом и поддержкой отмены.
+        /// </summary>
         public async Task UploadFilesBack(string pathTempDirectory, IProgress<(float, string, float)> progress, CancellationToken token)
         {
             List<string> TempDirectory = Directory.GetDirectories(pathTempDirectory, "*", SearchOption.AllDirectories).ToList();
@@ -368,6 +390,9 @@ namespace DedicatedFTPServerValheim
                 throw new Exception("Ошибка при загрузке файла " + filePathTemp);
             }
         }
+        /// <summary>
+        /// Удаляет все файлы и каталоги в целевой папке FTP.
+        /// </summary>
         public async Task DeleteFilesFTP(IProgress<(float, string, float)> progress, CancellationToken ct)
         {
             if (ct.IsCancellationRequested)
@@ -407,6 +432,9 @@ namespace DedicatedFTPServerValheim
                     ct.ThrowIfCancellationRequested();
             }
         }
+        /// <summary>
+        /// Удаляет все файлы и каталоги во временной локальной папке.
+        /// </summary>
         public async Task DeleteLocalFiles(string pathTempDirectory, IProgress<(float, string, float)> progress, CancellationToken ct)
         {
             List<string> TempDirectory = Directory.GetDirectories(pathTempDirectory, "*", SearchOption.AllDirectories).ToList();

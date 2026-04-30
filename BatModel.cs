@@ -3,6 +3,10 @@ using System.Text;
 
 namespace DedicatedFTPServerValheim
 {
+    /// <summary>
+    /// Парсер и генератор bat-файла запуска сервера.
+    /// Читает параметры из исходного bat, позволяет обновить их и создать временный bat для запуска.
+    /// </summary>
     internal class BatModel
     {
         string TempNameBat { get; set; }
@@ -13,11 +17,17 @@ namespace DedicatedFTPServerValheim
         public SettingModel? SettingBatModel { get; set; }
         string Body { get; set; }
 
+        /// <summary>
+        /// Создает модель с именем временного bat-файла.
+        /// </summary>
         public BatModel(string name)
         {
             TempNameBat = name;
         }
 
+        /// <summary>
+        /// Загружает параметры напрямую из bat-файла.
+        /// </summary>
         public SettingModel? LoadBatSettings(string pathBat)
         {
             try
@@ -43,6 +53,9 @@ namespace DedicatedFTPServerValheim
             }
 
         }
+        /// <summary>
+        /// Загружает параметры из сохраненных настроек приложения.
+        /// </summary>
         public SettingModel? LoadPropertySettings(string pathBat, StringCollection paramsBat)
         {
             this.SourceBatPath = pathBat;
@@ -70,6 +83,9 @@ namespace DedicatedFTPServerValheim
                 return null;
         }
 
+        /// <summary>
+        /// Создает временный bat с актуальными параметрами запуска.
+        /// </summary>
         public string CreateTempBat()
         {
             if (!SettingBatModel.HasValue)
@@ -101,6 +117,9 @@ namespace DedicatedFTPServerValheim
             return newBatPath;
         }
 
+        /// <summary>
+        /// Извлекает значение параметра из тела bat-файла.
+        /// </summary>
         private T LoadParameter<T>(string param)
         {
             var indParameter = Body.ToLower().IndexOf(param.ToLower());
@@ -136,6 +155,9 @@ namespace DedicatedFTPServerValheim
             }
         }
 
+        /// <summary>
+        /// Обновляет/добавляет/удаляет параметр в bat в зависимости от целевого значения.
+        /// </summary>
         private void UpdateParameter<T>(string param)
         {
             SettingModel sett = SettingBatModel.Value;

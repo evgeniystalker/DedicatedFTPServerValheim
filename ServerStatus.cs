@@ -4,6 +4,10 @@ using System.Text.Json;
 
 namespace DedicatedFTPServerValheim
 {
+    /// <summary>
+    /// Запись о состоянии одного экземпляра сервера в StatusServer.json.
+    /// Используется для координации нескольких клиентов через FTP.
+    /// </summary>
     public struct ServerStatus
     {
         public DateTime DateTimeStartServer { get; set; } 
@@ -15,6 +19,9 @@ namespace DedicatedFTPServerValheim
 
         public static string PathFtp;
 
+        /// <summary>
+        /// Создает объект статуса сервера.
+        /// </summary>
         public ServerStatus(DateTime dataStartServer, string world, StatusCodeServer statusCode, string ip, string nameServer, string nameUser, string pathFTP)
         {
             DateTimeStartServer = dataStartServer;
@@ -26,31 +33,40 @@ namespace DedicatedFTPServerValheim
             PathFtp = pathFTP;
         }
 
+        /// <summary>
+        /// Добавляет или обновляет текущую запись в StatusServer.json.
+        /// Выполняется с повторными попытками для повышения надежности.
+        /// </summary>
         public async Task CheckInAsync()
         {
-            try
+            const int maxRetries = 4;
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
-                List<ServerStatus> statusList = await GetListServersAsync();
-                ServerStatus statusThis = this;
-                var findInd = statusList.FindIndex(x => x.World == statusThis.World && x.DateTimeStartServer == statusThis.DateTimeStartServer && x.Ip == statusThis.Ip && x.NameServer == statusThis.NameServer);
-                if (statusList.Count != 0 && findInd != -1 && !statusList[findInd].Equals(default(ServerStatus)))
-                    statusList[findInd] = statusThis;
-                else
-                    statusList.Add(statusThis);
+                try
+                {
+                    List<ServerStatus> statusList = await GetListServersAsync();
+                    ServerStatus statusThis = this;
+                    var findInd = statusList.FindIndex(x => x.World == statusThis.World && x.DateTimeStartServer == statusThis.DateTimeStartServer && x.Ip == statusThis.Ip && x.NameServer == statusThis.NameServer);
+                    if (statusList.Count != 0 && findInd != -1 && !statusList[findInd].Equals(default(ServerStatus)))
+                        statusList[findInd] = statusThis;
+                    else
+                        statusList.Add(statusThis);
 
-                await UploadJsonListAsync(statusList);
-            }
-            catch (Exception)
-            {
-                throw;
+                    await UploadJsonListAsync(statusList);
+                    return;
+                }
+                catch when (attempt < maxRetries)
+                {
+                    await Task.Delay(150 * attempt);
+                }
             }
 
+            throw new WebException("Не удалось обновить статус сервера после нескольких попыток.");
         }
         /// <summary>
-        /// If server not find return string empty
+        /// Проверяет, есть ли активные серверы с тем же миром.
+        /// Если нет совпадений, возвращает пустую строку.
         /// </summary>
-        /// <param name="pathFTP"></param>
-        /// <returns></returns>
         public async Task<string> ServerCheckRunningAsync()
         {
             var serverStatusList = await GetListServersAsync();
@@ -68,6 +84,9 @@ namespace DedicatedFTPServerValheim
 
             return string.Empty;
         }
+        /// <summary>
+        /// Загружает список статусов серверов из StatusServer.json.
+        /// </summary>
         public static async Task<List<ServerStatus>> GetListServersAsync()
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create($"{PathFtp}/StatusServer.json") as FtpWebRequest;
@@ -81,16 +100,19 @@ namespace DedicatedFTPServerValheim
                 using Stream streamResponse = response.GetResponseStream();
                 resultList = await JsonSerializer.DeserializeAsync<List<ServerStatus>>(streamResponse);
                 streamResponse.Close();
-                return resultList;
+                return resultList ?? new List<ServerStatus>();
             }
             catch (WebException ex)
             {
-                if (ex.Message.Contains("550"))
+                if (IsNotFound(ex))
                     return new List<ServerStatus>();
                 else
                     throw;
             }
         }
+        /// <summary>
+        /// Полностью перезаписывает StatusServer.json переданным списком.
+        /// </summary>
         public static async Task UploadJsonListAsync(List<ServerStatus> list)
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create(PathFtp + "/StatusServer.json") as FtpWebRequest;
@@ -117,6 +139,18 @@ namespace DedicatedFTPServerValheim
                 throw;
             }
         }
+        private static bool IsNotFound(WebException ex)
+        {
+            if (ex.Response is FtpWebResponse ftpEx)
+            {
+                return ftpEx.StatusCode == FtpStatusCode.ActionNotTakenFileUnavailable;
+            }
+
+            return ex.Message.Contains("550");
+        }
+        /// <summary>
+        /// Удаляет файл StatusServer.json на FTP.
+        /// </summary>
         public static async Task DeleteJson()
         {
             FtpWebRequest ftpWeb = FtpWebRequest.Create($"{PathFtp}/StatusServer.json") as FtpWebRequest;
