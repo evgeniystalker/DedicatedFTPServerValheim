@@ -24,6 +24,12 @@ internal sealed class AppController
         }
     }
 
+    private void ForceState(AppState state)
+    {
+        _stateMachine.Force(state);
+        StateChanged?.Invoke(state);
+    }
+
     /// <summary>
     /// Полный сценарий старта:
     /// валидация -> планирование синхронизации -> применение плана -> запуск процесса -> запись статуса Run.
@@ -37,35 +43,44 @@ internal sealed class AppController
         IProgress<(float Overall, string Item, float ItemProgress)> progress,
         CancellationToken cancellationToken)
     {
-        SetState(AppState.Validating);
-        var ftp = new FtpClientAdapter(ftpUrl);
-        var syncService = new SyncService(ftp);
-        var statusService = new ServerStatusService(ftpUrl);
-
-        SetState(AppState.PlanningSync);
-        var downloadPlan = await syncService.BuildDownloadPlanAsync(tempDirectory, cancellationToken);
-        if (!allowDelete)
+        try
         {
-            downloadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
-        }
+            SetState(AppState.Validating);
+            var ftp = new FtpClientAdapter(ftpUrl);
+            var syncService = new SyncService(ftp);
+            var statusService = new ServerStatusService(ftpUrl);
 
-        if (!await confirmPlan(downloadPlan))
+            SetState(AppState.PlanningSync);
+            var downloadPlan = await syncService.BuildDownloadPlanAsync(tempDirectory, cancellationToken);
+            if (!allowDelete)
+            {
+                downloadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
+            }
+
+            if (!await confirmPlan(downloadPlan))
+            {
+                ForceState(AppState.Idle);
+                return;
+            }
+
+            SetState(AppState.ApplyingSyncDownload);
+            await syncService.ApplyPlanAsync(downloadPlan, tempDirectory, progress, cancellationToken);
+
+            SetState(AppState.PreparingStart);
+            bat.savedirParameter = tempDirectory;
+            bat.CreateTempBat();
+            _processService.Start(bat.TempBatPath);
+
+            var status = BuildStatus(bat, ftpUrl, ServerStatus.StatusCodeServer.Run);
+            await statusService.CheckInAsync(status, cancellationToken);
+            SetState(AppState.Running);
+        }
+        catch
         {
-            SetState(AppState.Idle);
-            return;
+            _processService.Stop(force: true);
+            ForceState(AppState.Idle);
+            throw;
         }
-
-        SetState(AppState.ApplyingSyncDownload);
-        await syncService.ApplyPlanAsync(downloadPlan, tempDirectory, progress, cancellationToken);
-
-        SetState(AppState.PreparingStart);
-        bat.savedirParameter = tempDirectory;
-        bat.CreateTempBat();
-        _processService.Start(bat.TempBatPath);
-
-        var status = BuildStatus(bat, ftpUrl, ServerStatus.StatusCodeServer.Run);
-        await statusService.CheckInAsync(status, cancellationToken);
-        SetState(AppState.Running);
     }
 
     /// <summary>
@@ -81,37 +96,45 @@ internal sealed class AppController
         IProgress<(float Overall, string Item, float ItemProgress)> progress,
         CancellationToken cancellationToken)
     {
-        SetState(AppState.Stopping);
-        _processService.Stop(force: true);
-        if (File.Exists(bat.TempBatPath))
+        try
         {
-            File.Delete(bat.TempBatPath);
+            SetState(AppState.Stopping);
+            _processService.Stop(force: true);
+            if (File.Exists(bat.TempBatPath))
+            {
+                File.Delete(bat.TempBatPath);
+            }
+
+            var ftp = new FtpClientAdapter(ftpUrl);
+            var syncService = new SyncService(ftp);
+            var statusService = new ServerStatusService(ftpUrl);
+
+            SetState(AppState.PlanningSync);
+            var uploadPlan = await syncService.BuildUploadPlanAsync(tempDirectory, cancellationToken);
+            if (!allowDelete)
+            {
+                uploadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
+            }
+
+            if (await confirmPlan(uploadPlan))
+            {
+                SetState(AppState.ApplyingSyncUpload);
+                await syncService.ApplyPlanAsync(uploadPlan, tempDirectory, progress, cancellationToken);
+            }
+
+            if (bat.SettingBatModel.HasValue)
+            {
+                var status = BuildStatus(bat, ftpUrl, ServerStatus.StatusCodeServer.Stop);
+                await statusService.CheckInAsync(status, cancellationToken);
+            }
+
+            ForceState(AppState.Idle);
         }
-
-        var ftp = new FtpClientAdapter(ftpUrl);
-        var syncService = new SyncService(ftp);
-        var statusService = new ServerStatusService(ftpUrl);
-
-        SetState(AppState.PlanningSync);
-        var uploadPlan = await syncService.BuildUploadPlanAsync(tempDirectory, cancellationToken);
-        if (!allowDelete)
+        catch
         {
-            uploadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
+            ForceState(AppState.Idle);
+            throw;
         }
-
-        if (await confirmPlan(uploadPlan))
-        {
-            SetState(AppState.ApplyingSyncUpload);
-            await syncService.ApplyPlanAsync(uploadPlan, tempDirectory, progress, cancellationToken);
-        }
-
-        if (bat.SettingBatModel.HasValue)
-        {
-            var status = BuildStatus(bat, ftpUrl, ServerStatus.StatusCodeServer.Stop);
-            await statusService.CheckInAsync(status, cancellationToken);
-        }
-
-        SetState(AppState.Idle);
     }
 
     /// <summary>
@@ -125,24 +148,32 @@ internal sealed class AppController
         IProgress<(float Overall, string Item, float ItemProgress)> progress,
         CancellationToken cancellationToken)
     {
-        SetState(AppState.PlanningSync);
-        var ftp = new FtpClientAdapter(ftpUrl);
-        var syncService = new SyncService(ftp);
-        var uploadPlan = await syncService.BuildUploadPlanAsync(tempDirectory, cancellationToken);
-        if (!allowDelete)
+        try
         {
-            uploadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
-        }
+            SetState(AppState.PlanningSync);
+            var ftp = new FtpClientAdapter(ftpUrl);
+            var syncService = new SyncService(ftp);
+            var uploadPlan = await syncService.BuildUploadPlanAsync(tempDirectory, cancellationToken);
+            if (!allowDelete)
+            {
+                uploadPlan.Items.RemoveAll(x => x.Operation == SyncOperationType.Delete);
+            }
 
-        if (!await confirmPlan(uploadPlan))
+            if (!await confirmPlan(uploadPlan))
+            {
+                ForceState(AppState.Idle);
+                return;
+            }
+
+            SetState(AppState.ApplyingSyncUpload);
+            await syncService.ApplyPlanAsync(uploadPlan, tempDirectory, progress, cancellationToken);
+            ForceState(AppState.Idle);
+        }
+        catch
         {
-            SetState(AppState.Idle);
-            return;
+            ForceState(AppState.Idle);
+            throw;
         }
-
-        SetState(AppState.ApplyingSyncUpload);
-        await syncService.ApplyPlanAsync(uploadPlan, tempDirectory, progress, cancellationToken);
-        SetState(AppState.Idle);
     }
 
     public bool CanExecute(AppCommand command) => _stateMachine.CanExecute(command);

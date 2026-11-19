@@ -44,7 +44,7 @@ internal sealed class ServerProcessService
                 _process.CloseMainWindow();
             }
 
-            _process.WaitForExit(5000);
+            _process.WaitForExit(1500);
         }
 
         _process.Dispose();

@@ -37,10 +37,10 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
         Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
 
         var request = CreateRequest(remoteUri, WebRequestMethods.Ftp.DownloadFile);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
+        using var response = await GetResponseCancellableAsync(request, cancellationToken);
         await using var remoteStream = response.GetResponseStream();
         await using var localFile = File.Create(localPath);
-        await remoteStream.CopyToAsync(localFile, cancellationToken);
+        await remoteStream.CopyToAsync(localFile, 81920, cancellationToken);
     }
 
     public async Task UploadFileAsync(string relativePath, string localRootPath, CancellationToken cancellationToken)
@@ -53,13 +53,13 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
         }
 
         var request = CreateRequest(remoteUri, WebRequestMethods.Ftp.UploadFile);
-        await using (var requestStream = await request.GetRequestStreamAsync())
+        await using (var requestStream = await GetRequestStreamCancellableAsync(request, cancellationToken))
         await using (var localFile = File.OpenRead(localPath))
         {
-            await localFile.CopyToAsync(requestStream, cancellationToken);
+            await localFile.CopyToAsync(requestStream, 81920, cancellationToken);
         }
 
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
+        using var response = await GetResponseCancellableAsync(request, cancellationToken);
         if (response.StatusCode != FtpStatusCode.ClosingData && response.StatusCode != FtpStatusCode.CommandOK)
         {
             throw new WebException($"Upload failed for {relativePath}: {response.StatusDescription}");
@@ -71,7 +71,7 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
         var request = CreateRequest(GetRemoteUri(relativePath), WebRequestMethods.Ftp.MakeDirectory);
         try
         {
-            using var _ = (FtpWebResponse)await request.GetResponseAsync();
+            using var _ = await GetResponseCancellableAsync(request, cancellationToken);
         }
         catch (WebException ex) when (TryGetFtpStatus(ex) == FtpStatusCode.ActionNotTakenFileUnavailable)
         {
@@ -82,13 +82,13 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
     public async Task DeleteFileAsync(string relativePath, CancellationToken cancellationToken)
     {
         var request = CreateRequest(GetRemoteUri(relativePath), WebRequestMethods.Ftp.DeleteFile);
-        using var _ = (FtpWebResponse)await request.GetResponseAsync();
+        using var _ = await GetResponseCancellableAsync(request, cancellationToken);
     }
 
     public async Task DeleteDirectoryAsync(string relativePath, CancellationToken cancellationToken)
     {
         var request = CreateRequest(GetRemoteUri(relativePath), WebRequestMethods.Ftp.RemoveDirectory);
-        using var _ = (FtpWebResponse)await request.GetResponseAsync();
+        using var _ = await GetResponseCancellableAsync(request, cancellationToken);
     }
 
     private async Task TraverseDirectoryAsync(Uri directoryUri, List<FileSystemSnapshotEntry> entries, CancellationToken cancellationToken)
@@ -103,7 +103,7 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
             }
 
             var (isDirectory, name) = ParseListDirectoryDetails(line);
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(name) || name is "." or "..")
             {
                 continue;
             }
@@ -126,16 +126,18 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
 
     private async Task<(long Size, DateTime LastWriteUtc)> GetFileMetadataAsync(Uri fileUri, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var sizeRequest = CreateRequest(fileUri, WebRequestMethods.Ftp.GetFileSize);
         long size;
-        using (var sizeResponse = (FtpWebResponse)await sizeRequest.GetResponseAsync())
+        using (var sizeResponse = await GetResponseCancellableAsync(sizeRequest, cancellationToken))
         {
             size = sizeResponse.ContentLength;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var dateRequest = CreateRequest(fileUri, WebRequestMethods.Ftp.GetDateTimestamp);
         DateTime lastWriteUtc;
-        using (var dateResponse = (FtpWebResponse)await dateRequest.GetResponseAsync())
+        using (var dateResponse = await GetResponseCancellableAsync(dateRequest, cancellationToken))
         {
             lastWriteUtc = dateResponse.LastModified.ToUniversalTime();
         }
@@ -146,7 +148,7 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
     private async Task<List<string>> ListDirectoryAsync(Uri uri, CancellationToken cancellationToken)
     {
         var request = CreateRequest(uri, WebRequestMethods.Ftp.ListDirectory);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
+        using var response = await GetResponseCancellableAsync(request, cancellationToken);
         using var stream = response.GetResponseStream();
         using var reader = new StreamReader(stream);
         var text = await reader.ReadToEndAsync(cancellationToken);
@@ -156,7 +158,7 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
     private async Task<List<string>> ListDirectoryDetailsAsync(Uri uri, CancellationToken cancellationToken)
     {
         var request = CreateRequest(uri, WebRequestMethods.Ftp.ListDirectoryDetails);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
+        using var response = await GetResponseCancellableAsync(request, cancellationToken);
         using var stream = response.GetResponseStream();
         using var reader = new StreamReader(stream);
         var text = await reader.ReadToEndAsync(cancellationToken);
@@ -183,7 +185,67 @@ internal sealed class FtpClientAdapter(string ftpRootUrl) : IFtpClient
         request.Method = method;
         request.UseBinary = true;
         request.KeepAlive = false;
+        request.Timeout = 15000;
+        request.ReadWriteTimeout = 15000;
         return request;
+    }
+
+    private static async Task<FtpWebResponse> GetResponseCancellableAsync(FtpWebRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var registration = cancellationToken.Register(static state =>
+        {
+            try
+            {
+                ((FtpWebRequest)state!).Abort();
+            }
+            catch
+            {
+                // Ignored: request may already be completed/disposed.
+            }
+        }, request);
+
+        try
+        {
+            return (FtpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException("FTP-запрос отменён.", ex, cancellationToken);
+        }
+        catch (WebException ex) when (ex.Status == WebExceptionStatus.RequestCanceled)
+        {
+            throw new OperationCanceledException("FTP-запрос отменён.", ex, cancellationToken);
+        }
+    }
+
+    private static async Task<Stream> GetRequestStreamCancellableAsync(FtpWebRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var registration = cancellationToken.Register(static state =>
+        {
+            try
+            {
+                ((FtpWebRequest)state!).Abort();
+            }
+            catch
+            {
+                // Ignored: request may already be completed/disposed.
+            }
+        }, request);
+
+        try
+        {
+            return await request.GetRequestStreamAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException("FTP-запрос отменён.", ex, cancellationToken);
+        }
+        catch (WebException ex) when (ex.Status == WebExceptionStatus.RequestCanceled)
+        {
+            throw new OperationCanceledException("FTP-запрос отменён.", ex, cancellationToken);
+        }
     }
 
     private Uri GetRemoteUri(string relativePath)

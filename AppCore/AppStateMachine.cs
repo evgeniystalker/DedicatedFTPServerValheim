@@ -14,7 +14,7 @@ internal sealed class AppStateMachine
         [AppState.ApplyingSyncDownload] = [AppState.PreparingStart, AppState.Idle, AppState.Error],
         [AppState.PreparingStart] = [AppState.Running, AppState.Idle, AppState.Error],
         [AppState.Running] = [AppState.Stopping, AppState.ApplyingSyncUpload, AppState.Error],
-        [AppState.Stopping] = [AppState.ApplyingSyncUpload, AppState.Idle, AppState.Error],
+        [AppState.Stopping] = [AppState.PlanningSync, AppState.ApplyingSyncUpload, AppState.Idle, AppState.Error],
         [AppState.ApplyingSyncUpload] = [AppState.Idle, AppState.Error],
         [AppState.Error] = [AppState.Idle, AppState.Validating]
     };
@@ -35,6 +35,11 @@ internal sealed class AppStateMachine
         CurrentState = nextState;
         return true;
     }
+
+    /// <summary>
+    /// Принудительно выставляет состояние (например, Idle после отмены/ошибки).
+    /// </summary>
+    public void Force(AppState state) => CurrentState = state;
 
     /// <summary>
     /// Проверяет, разрешена ли команда в текущем состоянии.

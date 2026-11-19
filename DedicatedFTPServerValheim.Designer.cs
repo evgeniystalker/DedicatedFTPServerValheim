@@ -143,6 +143,7 @@ namespace DedicatedFTPServerValheim
             // 
             // ButtonStop
             // 
+            ButtonStop.Enabled = false;
             ButtonStop.Location = new Point(365, 146);
             ButtonStop.Name = "ButtonStop";
             ButtonStop.Size = new Size(75, 23);

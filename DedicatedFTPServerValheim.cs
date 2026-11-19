@@ -26,6 +26,7 @@ namespace DedicatedFTPServerValheim
             pathFTP_Validated(ftpUrl, EventArgs.Empty);
 
             _controller.StateChanged += ApplyUiState;
+            ApplyUiState(_controller.CurrentState);
 
             _progressFileLoading = new Progress<(float, string, float)>(prog =>
             {
@@ -63,10 +64,10 @@ namespace DedicatedFTPServerValheim
         private void buttonPathStartFile_Click(object sender, EventArgs e)
         {
             OpenFileDialog dialog = new OpenFileDialog();
-            dialog.Filter = "˜˜˜ ˜˜˜˜˜|*.bat;*.exe|˜˜˜˜˜(*.exe)|*.exe|˜˜˜˜˜(*.bat)|*.bat";
+            dialog.Filter = "Ğ’ÑĞµ Ñ„Ğ°Ğ¹Ğ»Ñ‹|*.bat;*.exe|Ğ¤Ğ°Ğ¹Ğ»Ñ‹(*.exe)|*.exe|Ğ¤Ğ°Ğ¹Ğ»Ñ‹(*.bat)|*.bat";
             dialog.InitialDirectory = Path.GetDirectoryName(Properties.Settings.Default.StartFilePath);
             dialog.RestoreDirectory = true;
-            dialog.Title = "˜˜˜˜˜ .bat ˜˜˜˜˜";
+            dialog.Title = "Ğ’Ñ‹Ğ±Ğ¾Ñ€ .bat Ñ„Ğ°Ğ¹Ğ»Ğ°";
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 startFilePath.Clear();
@@ -79,7 +80,7 @@ namespace DedicatedFTPServerValheim
         private void buttonPathTemp_Click(object sender, EventArgs e)
         {
             FolderBrowserDialog dialog = new FolderBrowserDialog();
-            dialog.Description = "˜˜˜˜˜˜˜˜ ˜˜˜˜˜ ˜˜˜ ˜˜˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜.";
+            dialog.Description = "Ğ’Ñ‹Ğ±ĞµÑ€Ğ¸Ñ‚Ğµ Ğ¿Ğ°Ğ¿ĞºÑƒ Ğ´Ğ»Ñ ÑĞ¾Ñ…Ñ€Ğ°Ğ½ĞµĞ½Ğ¸Ñ Ğ²Ñ€ĞµĞ¼ĞµĞ½Ğ½Ñ‹Ñ… Ñ„Ğ°Ğ¹Ğ»Ğ¾Ğ².";
             dialog.ShowNewFolderButton = true;
             dialog.InitialDirectory = Properties.Settings.Default.TempDirectoryPath;
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -101,7 +102,7 @@ namespace DedicatedFTPServerValheim
 
             var statusService = new ServerStatusService(ftpUrl.Text);
             var running = await statusService.CheckRunningAsync(Bat.SettingBatModel.Value.World, CancellationToken.None);
-            if (!string.IsNullOrWhiteSpace(running) && MessageBox.Show(this, running + "˜˜˜˜˜˜˜˜˜ ˜˜˜˜ ˜˜˜?", "˜˜˜˜˜˜˜˜!", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
+            if (!string.IsNullOrWhiteSpace(running) && MessageBox.Show(this, running + "Ğ—Ğ°Ğ¿ÑƒÑÑ‚Ğ¸Ñ‚ÑŒ ÑĞ²Ğ¾Ğ¹ Ğ¼Ğ¸Ñ€?", "Ğ’Ğ½Ğ¸Ğ¼Ğ°Ğ½Ğ¸Ğµ!", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
             {
                 return;
             }
@@ -109,7 +110,7 @@ namespace DedicatedFTPServerValheim
             _tokenSource = new CancellationTokenSource();
             _tokenSource.Token.Register(() =>
             {
-                fileInfoDateTime.Text = "\r\n\r\n˜˜˜˜˜˜...";
+                fileInfoDateTime.Text = "\r\n\r\nĞÑ‚Ğ¼ĞµĞ½Ğ°...";
                 fileInfoDateTime.Visible = true;
             });
 
@@ -126,11 +127,11 @@ namespace DedicatedFTPServerValheim
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜.");
+                MessageBox.Show(this, "ĞĞ¿ĞµÑ€Ğ°Ñ†Ğ¸Ñ Ğ¾Ñ‚Ğ¼ĞµĞ½ĞµĞ½Ğ°.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜ ˜˜˜˜˜˜˜: " + ex.Message);
+                MessageBox.Show(this, "ĞÑˆĞ¸Ğ±ĞºĞ° Ğ·Ğ°Ğ¿ÑƒÑĞºĞ°: " + ex.Message);
             }
             finally
             {
@@ -176,6 +177,12 @@ namespace DedicatedFTPServerValheim
                 return;
             }
 
+            // Ğ‘ĞµĞ· Ğ·Ğ°Ğ¿ÑƒÑ‰ĞµĞ½Ğ½Ğ¾Ğ³Ğ¾ ÑĞµÑ€Ğ²ĞµÑ€Ğ° Stop Ğ½Ğµ Ğ´Ğ¾Ğ»Ğ¶ĞµĞ½ ÑÑ‚Ğ°Ñ€Ñ‚Ğ¾Ğ²Ğ°Ñ‚ÑŒ Ğ²Ñ‹Ğ³Ñ€ÑƒĞ·ĞºÑƒ Ğ½Ğ° FTP.
+            if (_controller.CurrentState != AppState.Running || Bat is null)
+            {
+                return;
+            }
+
             _tokenSource = new CancellationTokenSource();
             try
             {
@@ -190,11 +197,11 @@ namespace DedicatedFTPServerValheim
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜.");
+                MessageBox.Show(this, "ĞÑÑ‚Ğ°Ğ½Ğ¾Ğ²ĞºĞ° Ğ¾Ñ‚Ğ¼ĞµĞ½ĞµĞ½Ğ°.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜˜: " + ex.Message);
+                MessageBox.Show(this, "ĞÑˆĞ¸Ğ±ĞºĞ° Ğ¾ÑÑ‚Ğ°Ğ½Ğ¾Ğ²ĞºĞ¸: " + ex.Message);
             }
             finally
             {
@@ -258,7 +265,7 @@ namespace DedicatedFTPServerValheim
         {
             if (!Bat.SettingBatModel.HasValue)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜˜ ˜˜ .bat ˜˜ ˜˜˜˜˜˜˜˜˜, ˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜ ˜˜˜˜! ˜˜˜˜˜ ˜˜˜˜˜˜˜˜˜ ˜˜ ˜˜˜˜˜˜˜˜˜.");
+                MessageBox.Show(this, "ĞĞ°ÑÑ‚Ñ€Ğ¾Ğ¹ĞºĞ¸ Ğ¸Ğ· .bat Ğ½Ğµ Ğ·Ğ°Ğ³Ñ€ÑƒĞ¶ĞµĞ½Ñ‹, Ğ²Ğ¾Ğ·Ğ¼Ğ¾Ğ¶Ğ½Ğ¾ Ğ½ĞµĞ²ĞµÑ€Ğ½Ñ‹Ğ¹ Ñ„Ğ°Ğ¹Ğ»! Ğ‘ÑƒĞ´ÑƒÑ‚ Ğ·Ğ°Ğ³Ñ€ÑƒĞ¶ĞµĞ½Ñ‹ Ğ¿Ğ¾ ÑƒĞ¼Ğ¾Ğ»Ñ‡Ğ°Ğ½Ğ¸Ñ.");
                 Bat.SettingBatModel = new SettingModel();
             }
             SettingsBatForm settingBatForm = new SettingsBatForm(Bat.SettingBatModel.Value);
@@ -293,7 +300,7 @@ namespace DedicatedFTPServerValheim
             if (!CheckTempDirectoryPath() || !CheckFtpUrl())
                 return;
 
-            if (MessageBox.Show(this, "˜˜˜˜˜˜˜˜˜ ˜˜˜˜˜ ˜˜ ˜˜˜˜˜˜ FTP?", "˜˜˜˜˜˜˜˜!", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (MessageBox.Show(this, "Ğ—Ğ°Ğ³Ñ€ÑƒĞ·Ğ¸Ñ‚ÑŒ Ñ„Ğ°Ğ¹Ğ»Ñ‹ Ğ½Ğ° ÑĞµÑ€Ğ²ĞµÑ€ FTP?", "Ğ’Ğ½Ğ¸Ğ¼Ğ°Ğ½Ğ¸Ğµ!", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 _tokenSource = new CancellationTokenSource();
                 try
@@ -309,7 +316,7 @@ namespace DedicatedFTPServerValheim
                 catch (OperationCanceledException) { }
                 catch (Exception wEx)
                 {
-                    MessageBox.Show(this, "˜˜˜˜˜˜ ˜˜˜˜˜˜˜˜˜˜˜ ˜ FTP..." + wEx.Message);
+                    MessageBox.Show(this, "ĞÑˆĞ¸Ğ±ĞºĞ° Ğ¿Ğ¾Ğ´ĞºĞ»ÑÑ‡ĞµĞ½Ğ¸Ñ Ğº FTP..." + wEx.Message);
                 }
                 finally
                 {
@@ -337,9 +344,9 @@ namespace DedicatedFTPServerValheim
             catch (WebException ex)
             {
                 if (ex.Message.Contains("550"))
-                    MessageBox.Show(this, "˜˜ ˜˜˜˜˜˜˜ FTP ˜˜˜ json ˜˜˜˜˜.", "˜˜˜ ˜˜˜˜˜!");
+                    MessageBox.Show(this, "ĞĞ° ÑĞµÑ€Ğ²ĞµÑ€Ğµ FTP Ğ½ĞµÑ‚ json Ñ„Ğ°Ğ¹Ğ»Ğ°.", "ĞĞµÑ‚ Ñ„Ğ°Ğ¹Ğ»Ğ°!");
 
-                MessageBox.Show(this, ex.Message, "˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜!");
+                MessageBox.Show(this, ex.Message, "Ğ’Ğ½Ğ¸Ğ¼Ğ°Ğ½Ğ¸Ğµ Ğ¾ÑˆĞ¸Ğ±ĞºĞ°!");
             }
         }
 
@@ -347,7 +354,7 @@ namespace DedicatedFTPServerValheim
         {
             if (!Directory.Exists(tempDirectoryPath.Text) || tempDirectoryPath.Text.IndexOfAny(invChars ?? Path.GetInvalidPathChars()) > 0)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜ ˜˜˜˜! PathTemp");
+                MessageBox.Show(this, "ĞĞµĞ²ĞµÑ€Ğ½Ñ‹Ğ¹ Ğ¿ÑƒÑ‚ÑŒ! PathTemp");
                 StateActive();
                 return false;
             }
@@ -358,7 +365,7 @@ namespace DedicatedFTPServerValheim
         {
             if (!Uri.IsWellFormedUriString(ftpUrl.Text, UriKind.Absolute) || ftpUrl.Text.IndexOfAny(invChars ?? Path.GetInvalidPathChars()) > 0)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜ ˜˜˜˜ ˜˜˜˜˜˜ Ftp!");
+                MessageBox.Show(this, "ĞĞµĞ²ĞµÑ€Ğ½Ñ‹Ğ¹ Ğ¿ÑƒÑ‚ÑŒ ÑÑÑ‹Ğ»ĞºĞ¸ Ftp!");
                 StateActive();
                 return false;
             }
@@ -372,7 +379,7 @@ namespace DedicatedFTPServerValheim
         {
             if (!File.Exists(startFilePath.Text) || startFilePath.Text.IndexOfAny(invChars ?? Path.GetInvalidPathChars()) > 0)
             {
-                MessageBox.Show(this, "˜˜˜˜˜˜˜˜ ˜˜˜˜! ˜˜˜˜˜˜˜˜˜ ˜˜˜˜˜˜˜.");
+                MessageBox.Show(this, "ĞĞµĞ²ĞµÑ€Ğ½Ñ‹Ğ¹ Ğ¿ÑƒÑ‚ÑŒ! ĞŸÑ€Ğ¾Ğ³Ñ€Ğ°Ğ¼Ğ¼Ñ‹ ÑĞµÑ€Ğ²ĞµÑ€Ğ°.");
                 StateActive();
                 return false;
             }
@@ -411,7 +418,7 @@ namespace DedicatedFTPServerValheim
             {
                 var shema = ftpUrl.Text.Substring(0, ftpUrl.Text.IndexOf("://") + 3);
                 StateBlockedUrlFtp();
-                MessageBox.Show($"˜˜˜˜˜˜˜˜ ˜˜˜˜˜ ˜˜˜˜˜˜ ˜˜ ftp ({shema}). ˜˜˜˜˜˜˜˜˜ ftp://");
+                MessageBox.Show($"ĞĞµĞ²ĞµÑ€Ğ½Ğ°Ñ ÑÑ…ĞµĞ¼Ğ° ÑÑÑ‹Ğ»ĞºĞ¸ Ğ½Ğ° ftp ({shema}). Ğ¢Ñ€ĞµĞ±ÑƒĞµÑ‚ÑÑ ftp://");
                 return;
             }
 
@@ -440,12 +447,12 @@ namespace DedicatedFTPServerValheim
         private Task<bool> ConfirmSyncPlanAsync(SyncPlan plan)
         {
             var text =
-                $"˜˜˜˜˜˜˜˜: {plan.Items.Count}\n" +
-                $"˜˜˜˜˜˜˜: {plan.CreateCount}\n" +
-                $"˜˜˜˜˜˜˜˜: {plan.UpdateCount}\n" +
-                $"˜˜˜˜˜˜˜: {plan.DeleteCount}\n\n" +
-                "˜˜˜˜˜˜˜˜˜ ˜˜˜˜ ˜˜˜˜˜˜˜˜˜˜˜˜˜?";
-            var result = MessageBox.Show(this, text, "˜˜˜˜ ˜˜˜˜˜˜˜˜˜˜˜˜˜", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                $"ĞĞ¿ĞµÑ€Ğ°Ñ†Ğ¸Ğ¹: {plan.Items.Count}\n" +
+                $"Ğ¡Ğ¾Ğ·Ğ´Ğ°Ñ‚ÑŒ: {plan.CreateCount}\n" +
+                $"ĞĞ±Ğ½Ğ¾Ğ²Ğ¸Ñ‚ÑŒ: {plan.UpdateCount}\n" +
+                $"Ğ£Ğ´Ğ°Ğ»Ğ¸Ñ‚ÑŒ: {plan.DeleteCount}\n\n" +
+                "ĞŸÑ€Ğ¸Ğ¼ĞµĞ½Ğ¸Ñ‚ÑŒ Ğ¿Ğ»Ğ°Ğ½ ÑĞ¸Ğ½Ñ…Ñ€Ğ¾Ğ½Ğ¸Ğ·Ğ°Ñ†Ğ¸Ğ¸?";
+            var result = MessageBox.Show(this, text, "ĞŸĞ»Ğ°Ğ½ ÑĞ¸Ğ½Ñ…Ñ€Ğ¾Ğ½Ğ¸Ğ·Ğ°Ñ†Ğ¸Ğ¸", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             return Task.FromResult(result == DialogResult.Yes);
         }
 
@@ -473,7 +480,7 @@ namespace DedicatedFTPServerValheim
             {
                 StateFileDownloadComlite();
                 fileInfoDateTime.Visible = false;
-                fileInfoDateTime.Text = "˜˜˜˜ ˜˜˜˜˜˜˜˜˜\r\n˜˜˜˜˜˜ ˜˜ FTP:\r\n";
+                fileInfoDateTime.Text = "Ğ”Ğ°Ñ‚Ğ° Ğ¸Ğ·Ğ¼ĞµĞ½ĞµĞ½Ğ¸Ñ\r\nÑ„Ğ°Ğ¹Ğ»Ğ¾Ğ² Ğ½Ğ° FTP:\r\n";
             }
         }
     }
